@@ -57,3 +57,9 @@ class SearchAndShellTests(TestCase):
     def test_login_page_has_logo(self):
         r = self.client.get(reverse("accounts:login"))
         self.assertContains(r, "bits-logo-480.png")
+
+    def test_login_page_google_placeholder(self):
+        r = self.client.get(reverse("accounts:login"))
+        self.assertContains(r, "Continue with Google")
+        self.assertContains(r, "Google sign-in is coming soon")
+        self.assertNotContains(r, "accounts.google.com")  # no real Google flow yet

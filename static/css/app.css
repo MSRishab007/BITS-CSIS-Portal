@@ -599,6 +599,24 @@ a.hbar-label:hover { color: var(--accent-text); }
 .auth-card .btn { margin-top: 22px; height: 40px; }
 .auth-org { text-align: center; font-size: .78rem; color: var(--muted); margin-bottom: 20px; }
 
+/* "or" divider + Google button (sign-in page) */
+.divider-or { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px; color: var(--muted); font-size: .76rem; }
+.divider-or::before, .divider-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.auth-card .btn-google { margin-top: 0; height: 40px; justify-content: center; gap: 10px; font-weight: 550; }
+.btn-google svg { width: 18px; height: 18px; }
+
+/* Small centred dialog */
+.dialog-backdrop { position: fixed; inset: 0; z-index: 160; display: grid; place-items: center; padding: 20px;
+  background: rgba(10, 10, 10, .4); backdrop-filter: blur(3px); }
+.dialog { width: min(400px, 100%); padding: 26px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg); text-align: center; position: relative; overflow: hidden; }
+.dialog::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--tri); }
+.dialog h2 { font-size: 1.1rem; margin-top: 4px; }
+.dialog p { margin: 10px 0 20px; font-size: .88rem; }
+.dialog-icon { width: 48px; height: 48px; margin: 4px auto 14px; border-radius: 14px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent-text); }
+.dialog-icon svg { width: 24px; height: 24px; }
+
 /* ---------- Animations ---------- */
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

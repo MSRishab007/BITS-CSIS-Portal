@@ -44,9 +44,12 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "axes",
+    "simple_history",
     # Project apps
     "apps.core",
     "apps.accounts",
+    "apps.catalog",
+    "apps.purchases",
 ]
 
 MIDDLEWARE = [
@@ -58,6 +61,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.accounts.middleware.ForcePasswordChangeMiddleware",
+    # Records which user made each change in the change history.
+    "simple_history.middleware.HistoryRequestMiddleware",
     # Must be last: turns a locked-out login into a "too many attempts" page.
     "axes.middleware.AxesMiddleware",
 ]

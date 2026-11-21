@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserChangeForm
 from django.template.response import TemplateResponse
 from django.utils.cache import add_never_cache_headers
+from simple_history.admin import SimpleHistoryAdmin
 
 from .models import User
 from .passwords import generate_password, set_generated_password
@@ -24,7 +25,7 @@ class PortalUserChangeForm(UserChangeForm):
 
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin):
+class UserAdmin(SimpleHistoryAdmin, BaseUserAdmin):
     form = PortalUserChangeForm
     add_form = PortalUserAddForm
 

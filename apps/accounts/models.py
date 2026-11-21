@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 from .managers import UserManager
 from .validators import validate_allowed_email_domain
@@ -108,6 +109,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True)
 
     objects = UserManager()
+    # Change log of profile/role/status edits (password hashes are not copied).
+    history = HistoricalRecords(excluded_fields=["password", "last_login"])
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"

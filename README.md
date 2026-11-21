@@ -69,7 +69,10 @@ python manage.py migrate             # if the commit added migrations
 ```
 config/            settings, URLs, WSGI/ASGI
 apps/core/         shared pieces: TimeStampedModel base, health check
-apps/accounts/     custom User model (email login, roles), admin
+apps/accounts/     custom User model (email/username login, roles), admin
+apps/catalog/      lookup lists (categories, types, vendors, funding, venues)
+                   and admin-defined custom fields
+apps/purchases/    invoices (Purchase) and their items (PurchaseItem)
 templates/         site-wide templates
 static/            site-wide CSS/JS/images
 media/             uploaded bills (private, git-ignored)
@@ -86,6 +89,28 @@ media/             uploaded bills (private, git-ignored)
   *Generate new password for selected users* → confirm.
 - **Lockout:** 5 wrong passwords lock that account for 15 minutes.
   Unlock early from Admin → Axes → Access attempts (delete the entry).
+
+## Data model
+
+```
+Purchase (one invoice)          PurchaseItem (one line on the invoice)
+  owner ─► User                   purchase ─► Purchase
+  vendor ─► Vendor                category ─► Category, item_type ─► ItemType
+  invoice_number, order_number    item_name, quantity, amount
+  purchase_date, delivery_date    funding_source ─► FundingSource
+  bill_amount, bill_file            (+ project no. & PI for Research Grant)
+  remarks, extra{custom fields}   venue ─► Venue, serial_numbers, asset_tag
+                                  warranty_end_date, status, remarks, extra{}
+```
+
+- **Who sees what:** `Purchase.objects.visible_to(user)` returns everything for
+  Admin/HoD and only their own invoices for faculty. Every list screen uses it.
+- **Change history:** every add/edit/delete of users, lookup lists, invoices
+  and items is recorded (django-simple-history) with who and when. See the
+  *History* button on any admin page.
+- **Custom fields:** Admin → Custom fields. Values are stored in the `extra`
+  JSON column, so adding a field needs no database change.
+- **Lookup lists** are deactivated, not deleted, so old records keep their values.
 
 ## Design notes
 

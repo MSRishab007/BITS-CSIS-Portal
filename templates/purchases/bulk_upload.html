@@ -90,8 +90,9 @@
   <div class="card stat accent" style="--i:0"><div class="stat-label">Ready to import</div><div class="stat-value">{{ result.invoices|length }} invoice{{ result.invoices|length|pluralize }}</div>
     <div class="stat-note">{{ result.item_count }} item{{ result.item_count|pluralize }} from {{ result.row_count }} row{{ result.row_count|pluralize }}</div></div>
   <div class="card stat" style="--i:1"><div class="stat-label">Total of bills</div><div class="stat-value">₹{{ result.total_amount|inr }}</div></div>
-  <div class="card stat" style="--i:2"><div class="stat-label">New vendors</div><div class="stat-value">{{ result.new_vendors|length }}</div>
-    {% if result.new_vendors %}<div class="stat-note">{{ result.new_vendors|join:", " }}</div>{% endif %}</div>
+  <div class="card stat" style="--i:2"><div class="stat-label">New vendors · venues</div>
+    <div class="stat-value">{{ result.new_vendors|length }} · {{ result.new_venues|length }}</div>
+    {% if result.new_vendors or result.new_venues %}<div class="stat-note">{{ result.new_vendors|join:", " }}{% if result.new_vendors and result.new_venues %} · {% endif %}{{ result.new_venues|join:", " }}</div>{% endif %}</div>
 </div>
 
 <section class="card">

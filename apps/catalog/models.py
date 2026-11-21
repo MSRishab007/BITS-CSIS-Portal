@@ -161,10 +161,32 @@ class FundingSource(LookupBase):
 
 
 class Venue(LookupBase):
-    """Where an item is placed, e.g. 'Lab 6105' or 'Server Room'."""
+    """Where an item is placed, e.g. 'Lab 6105' or 'Server Room'.
+
+    Faculty can type a new venue while entering a purchase; it is added to
+    this list (case-insensitive match against existing names first).
+    """
 
     building = models.CharField(max_length=120, blank=True)
     history = HistoricalRecords()
+
+    @classmethod
+    def get_or_create_by_name(cls, name: str):
+        """Existing venue with this name (any case/spacing), or a new one.
+
+        A hidden (inactive) venue with the same name is shown again rather
+        than duplicated.
+        """
+        clean = _SPACES.sub(" ", (name or "").strip())
+        if not clean:
+            raise ValidationError("Enter a venue name.")
+        venue = cls.objects.filter(name__iexact=clean).first()
+        if venue is None:
+            return cls.objects.create(name=clean[:120]), True
+        if not venue.is_active:
+            venue.is_active = True
+            venue.save(update_fields=["is_active", "updated_at"])
+        return venue, False
 
     class Meta(LookupBase.Meta):
         constraints = [models.UniqueConstraint(Lower("name"), name="unique_venue_name_ci")]

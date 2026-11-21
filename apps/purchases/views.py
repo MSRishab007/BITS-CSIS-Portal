@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
-from apps.catalog.models import Category, CustomField, FundingSource, Vendor, normalize_vendor_name
+from apps.catalog.models import Category, CustomField, FundingSource, Vendor, Venue, normalize_vendor_name
 from apps.core.templatetags.portal_tags import inr
 
 from . import bulk, exports
@@ -38,6 +38,7 @@ def _form_context():
              "types": [{"id": t.id, "name": t.name} for t in c.types.all() if t.is_active]}
             for c in categories
         ],
+        "venues": list(Venue.objects.active().order_by("name").values_list("name", flat=True)),
         "project_funding_ids": list(
             FundingSource.objects.filter(requires_project_details=True).values_list("id", flat=True)
         ),
@@ -56,7 +57,11 @@ def _save_purchase(request, form, formset):
     a vendor that was auto-created from a typed name.
     """
     with transaction.atomic():
-        if form.is_valid() and formset.is_valid():
+        # Validate BOTH inside the transaction (no short-circuit): anything the
+        # checks create (a typed vendor or venue) must be rolled back together.
+        form_ok = form.is_valid()
+        formset_ok = formset.is_valid()
+        if form_ok and formset_ok:
             purchase = form.save(commit=False)
             if not purchase.pk:
                 purchase.created_by = request.user
@@ -136,6 +141,7 @@ def purchase_add_items(request, pk):
                 n = len(created)
                 messages.success(request, f"Added {n} item{'s' * (n != 1)} to invoice {purchase.invoice_number}.")
                 return redirect("purchases:detail", pk=purchase.pk)
+            transaction.set_rollback(True)  # undo venues typed on rows that failed
     return render(request, "purchases/form.html", {
         "purchase": purchase, "formset": formset, "mode": "add_items", "form_data": _form_context(),
     })
@@ -413,5 +419,6 @@ def bulk_confirm(request):
                       {"result": result, "filename": name, "max_rows": bulk.MAX_ROWS, "steps": BULK_STEPS})
     n, m = len(result.invoices), result.item_count
     extra = f" {len(result.new_vendors)} new vendor(s) added." if result.new_vendors else ""
+    extra += f" {len(result.new_venues)} new venue(s) added." if result.new_venues else ""
     messages.success(request, f"Imported {n} invoice{'s' * (n != 1)} with {m} item{'s' * (m != 1)}.{extra}")
     return redirect("purchases:list")

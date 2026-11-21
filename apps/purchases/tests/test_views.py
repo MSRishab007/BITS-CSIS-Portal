@@ -177,6 +177,42 @@ class CreatePurchaseTests(ViewTestBase):
         r = self.client.post(self.url, self.post_data(vendor=self.dell.pk, vendor_name=self.dell.name))
         self.assertContains(r, "already recorded by Faculty Two")
 
+    def test_venue_typed_new_is_created(self):
+        self.client.force_login(self.f1)
+        data = self.post_data(vendor=self.dell.pk, vendor_name=self.dell.name)
+        data["items-0-venue_name"] = "  Lab 6105 "
+        self.client.post(self.url, data)
+        from apps.catalog.models import Venue
+        venue = Venue.objects.get(name="Lab 6105")
+        self.assertEqual(PurchaseItem.objects.get().venue, venue)
+
+    def test_venue_existing_matched_case_insensitively(self):
+        from apps.catalog.models import Venue
+        lab = Venue.objects.create(name="Server Room")
+        self.client.force_login(self.f1)
+        data = self.post_data(vendor=self.dell.pk, vendor_name=self.dell.name)
+        data["items-0-venue_name"] = "server room"
+        self.client.post(self.url, data)
+        self.assertEqual(Venue.objects.count(), 1)
+        self.assertEqual(PurchaseItem.objects.get().venue, lab)
+
+    def test_new_venue_rolled_back_when_form_invalid(self):
+        from apps.catalog.models import Venue
+        self.client.force_login(self.f1)
+        data = self.post_data(vendor=self.dell.pk, vendor_name=self.dell.name, purchase_date="")
+        data["items-0-venue_name"] = "Lab 9999"
+        r = self.client.post(self.url, data)
+        self.assertFalse(Venue.objects.filter(name="Lab 9999").exists())
+        self.assertContains(r, 'data-initial="Lab 9999"')  # typed text kept
+
+    def test_venues_offered_in_form(self):
+        from apps.catalog.models import Venue
+        Venue.objects.create(name="Lab 6105")
+        Venue.objects.create(name="Old Lab", is_active=False)
+        self.client.force_login(self.f1)
+        r = self.client.get(self.url)
+        self.assertContains(r, '"venues": ["Lab 6105"]')
+
     def test_bill_upload(self):
         self.client.force_login(self.f1)
         data = self.post_data(vendor=self.dell.pk, vendor_name=self.dell.name)

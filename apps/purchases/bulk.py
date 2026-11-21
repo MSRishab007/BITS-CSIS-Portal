@@ -91,7 +91,8 @@ def build_columns(user) -> list[Column]:
         Column("funding_source", "Funding source", True, "Choose from the list.", 20, level="item"),
         Column("project_number", "Project / grant no.", help="Required for Research Grant.", width=20, level="item"),
         Column("principal_investigator", "PI name", width=18, level="item"),
-        Column("venue", "Venue", help="Where it's placed. Choose from the list. Optional.", width=18, level="item"),
+        Column("venue", "Venue", help="Where it's placed. Pick from the list or type a new lab/room. Optional.",
+               width=18, level="item"),
         Column("serial_numbers", "Serial numbers", help="Separate several with commas.", width=22, level="item"),
         Column("asset_tag", "Asset tag", width=14, level="item"),
         Column("warranty_end_date", "Warranty end date", help="DD-MM-YYYY, optional.", width=17, kind="date",
@@ -170,7 +171,7 @@ def build_template_xlsx(user) -> bytes:
         ("2. For an invoice with several items, repeat the invoice number, vendor, dates and bill amount on each row.", False),
         ("3. Blue columns are required. Hover over a header to see a hint.", False),
         ("4. Use the dropdowns for category, type, funding source, venue and status.", False),
-        ("   Vendor has a dropdown of known vendors, but you can type a new vendor name.", False),
+        ("   Vendor and Venue have dropdowns of known names, but you can type a new one.", False),
         ("5. Dates as DD-MM-YYYY. Amounts in rupees without the ₹ sign.", False),
         ("6. Bills (PDF/images) can't go in the spreadsheet: attach them afterwards from each invoice's Edit page.", False),
         ("7. Upload the file on the Bulk upload page. You'll see a preview and any errors before anything is saved.", False),
@@ -215,8 +216,8 @@ def build_template_xlsx(user) -> bytes:
         source = dropdowns.get(col.key) or (col.key if col.key in list_ranges else None)
         if source and source in list_ranges:
             dv = DataValidation(type="list", formula1=f"={list_ranges[source]}", allow_blank=True)
-            if col.key == "vendor":
-                dv.showErrorMessage = False  # allow typing a new vendor
+            if col.key in ("vendor", "venue"):
+                dv.showErrorMessage = False  # allow typing a new vendor / venue
             else:
                 dv.error = "Choose a value from the list."
                 dv.errorTitle = "Not in the list"
@@ -392,7 +393,7 @@ class Lookups:
         for t in ItemType.objects.active().select_related("category"):
             self.types[(t.category_id, t.name.lower())] = t
         self.funding = {f.name.lower(): f for f in FundingSource.objects.active()}
-        self.venues = {v.name.lower(): v for v in Venue.objects.active()}
+        self.new_venues = []
         self.statuses = {}
         for value, label in PurchaseItem.Status.choices:
             self.statuses[value.lower()] = value
@@ -418,7 +419,11 @@ class Lookups:
         return self._get(self.funding, v, "funding source")
 
     def venue(self, v):
-        return self._get(self.venues, v, "venue")
+        """Existing venue, or a new one (added inside the import transaction)."""
+        venue, created = Venue.get_or_create_by_name(str(v))
+        if created:
+            self.new_venues.append(venue.name)
+        return venue
 
     def status(self, v):
         return self._get(self.statuses, v, "status")
@@ -439,6 +444,7 @@ class ImportResult:
     errors: list[RowError] = field(default_factory=list)
     invoices: list[dict] = field(default_factory=list)
     new_vendors: list[str] = field(default_factory=list)
+    new_venues: list[str] = field(default_factory=list)
     row_count: int = 0
     committed: bool = False
 
@@ -607,6 +613,7 @@ def run_import(headers: list[str], data: list[tuple[int, list]], user, commit: b
                                          "funding": item.funding_source.name if item.funding_source_id else ""})
             result.invoices.append(summary)
 
+        result.new_venues = lookups.new_venues
         if result.errors or not commit:
             transaction.set_rollback(True)
         else:

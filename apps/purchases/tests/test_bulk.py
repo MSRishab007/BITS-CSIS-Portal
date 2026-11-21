@@ -215,6 +215,15 @@ class ImportTests(BulkTestBase):
         self.assertContains(r, "step: 3, error: false")
         self.assertContains(r, "1 invoice ready")
 
+    def test_unknown_venue_is_created_on_import_only(self):
+        from apps.catalog.models import Venue
+        r = self.upload(self.f1, [self.row(venue="Lab 6105"), self.row(invoice_number="B", venue="lab 6105")])
+        self.assertEqual(r.context["result"].new_venues, ["Lab 6105"])
+        self.assertFalse(Venue.objects.exists())  # preview is a dry run
+        self.client.post(reverse("purchases:bulk_confirm"))
+        self.assertEqual(Venue.objects.count(), 1)
+        self.assertEqual(set(PurchaseItem.objects.values_list("venue__name", flat=True)), {"Lab 6105"})
+
     def test_rejects_other_file_types(self):
         self.client.force_login(self.f1)
         f = SimpleUploadedFile("x.pdf", b"%PDF-1.4", content_type="application/pdf")

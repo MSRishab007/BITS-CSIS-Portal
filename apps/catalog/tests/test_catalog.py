@@ -84,3 +84,17 @@ class CustomFieldTests(TestCase):
     def test_inactive_fields_ignored(self):
         self.make("Old Field", CustomField.FieldType.TEXT, required=True, is_active=False)
         self.assertEqual(clean_extra("ITEM", {}), {})
+
+
+class VenueTests(TestCase):
+    def test_get_or_create_matches_case_and_reactivates(self):
+        from apps.catalog.models import Venue
+        v, created = Venue.get_or_create_by_name("Lab  6105")
+        self.assertTrue(created)
+        self.assertEqual(v.name, "Lab 6105")
+        v.is_active = False
+        v.save()
+        again, created = Venue.get_or_create_by_name("LAB 6105")
+        self.assertFalse(created)
+        self.assertEqual(again.pk, v.pk)
+        self.assertTrue(again.is_active)

@@ -147,6 +147,33 @@
     }));
 
     // ------------------------------------------------------------------
+    // Venue: filter the known venues as you type, or keep a new name.
+    Alpine.data("venuePicker", () => ({
+      ...listKeys,
+      query: "", open: false, active: 0, venues: [],
+      init() {
+        this.venues = formData().venues || [];
+        this.query = this.$el.dataset.initial || "";
+      },
+      get matches() {
+        const q = this.query.trim().toLowerCase();
+        return this.venues.filter((v) => !q || v.toLowerCase().includes(q)).slice(0, 8);
+      },
+      get showCreate() {
+        const q = this.query.trim().toLowerCase();
+        return q !== "" && !this.venues.some((v) => v.toLowerCase() === q);
+      },
+      optionCount() { return this.matches.length + (this.showCreate ? 1 : 0); },
+      choose(v) { this.query = v; this.open = false; },
+      enter(e) {
+        if (!this.open) return;
+        e.preventDefault();
+        if (this.active < this.matches.length) this.choose(this.matches[this.active]);
+        else this.open = false;
+      },
+    }));
+
+    // ------------------------------------------------------------------
     Alpine.data("itemRow", () => ({
       category: "", type: "", funding: "", name: "", deleted: false, more: false, data: null,
 

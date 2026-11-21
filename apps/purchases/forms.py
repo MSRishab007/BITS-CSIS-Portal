@@ -147,6 +147,11 @@ class PurchaseForm(CustomFieldsMixin, forms.ModelForm):
 class PurchaseItemForm(CustomFieldsMixin, forms.ModelForm):
     applies_to = CustomField.AppliesTo.ITEM
 
+    venue_name = forms.CharField(
+        label="Venue (where it's placed)", max_length=120, required=False,
+        help_text="Pick a lab or room, or type a new one.",
+    )
+
     class Meta:
         model = PurchaseItem
         fields = ("category", "item_type", "item_name", "quantity", "amount", "funding_source", "project_number",
@@ -166,9 +171,12 @@ class PurchaseItemForm(CustomFieldsMixin, forms.ModelForm):
             ItemType.objects.select_related("category"), inst.item_type_id)
         self.fields["funding_source"].queryset = active_or_current(FundingSource.objects.all(),
                                                                    inst.funding_source_id)
-        self.fields["venue"].queryset = active_or_current(Venue.objects.all(), inst.venue_id)
+        # Venue is chosen or typed by name (see venue_name); the id field is not shown.
+        self.fields["venue"].queryset = Venue.objects.all()
         self.fields["venue"].required = False
-        self.fields["venue"].empty_label = "Not specified"
+        self.fields["venue"].widget = forms.HiddenInput()
+        if inst.venue_id and not self.is_bound:
+            self.initial.setdefault("venue_name", inst.venue.name)
         self.fields["amount"].widget.attrs.update({"step": "0.01", "min": "0", "inputmode": "decimal"})
         self.fields["quantity"].widget.attrs.update({"min": "1"})
         # Bind to the row's Alpine.js state (see static/js/purchase-form.js).
@@ -179,6 +187,12 @@ class PurchaseItemForm(CustomFieldsMixin, forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        # Typed venue: use the existing one with that name, or add it. The view
+        # runs inside a transaction, so it's undone if the form has errors.
+        name = (cleaned.get("venue_name") or "").strip()
+        venue = Venue.get_or_create_by_name(name)[0] if name else None
+        cleaned["venue"] = venue
+        self.instance.venue = venue
         self.clean_custom_fields(category=cleaned.get("category"))
         return cleaned
 

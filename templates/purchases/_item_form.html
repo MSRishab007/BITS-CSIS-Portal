@@ -41,7 +41,30 @@
       {% include "partials/field.html" with field=f.quantity %}
       {% include "partials/field.html" with field=f.amount hide_help=True label="Amount (₹, all units)" %}
       {% include "partials/field.html" with field=f.funding_source %}
-      {% include "partials/field.html" with field=f.venue label="Venue (where it's placed)" %}
+      {# Venue: pick an existing lab/room or type a new one (added on save) #}
+      <div class="field combo{% if f.venue_name.errors %} has-error{% endif %}" x-data="venuePicker"
+           data-initial="{{ f.venue_name.value|default_if_none:'' }}" @click.outside="open = false">
+        <label for="id_{{ f.prefix }}-venue_name">Venue (where it's placed)</label>
+        <input type="text" name="{{ f.prefix }}-venue_name" id="id_{{ f.prefix }}-venue_name" maxlength="120" autocomplete="off"
+               x-model="query" @focus="open = true" @input="open = true; active = 0"
+               @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)" @keydown.enter="enter($event)"
+               @keydown.escape="open = false" @blur="setTimeout(() => open = false, 150)" placeholder="e.g. Lab 6105 (optional)">
+        <div class="combo-list" x-show="open && (matches.length || showCreate)" x-cloak
+             x-transition:enter="t-enter" x-transition:enter-start="t-from" x-transition:enter-end="t-to">
+          <template x-if="matches.length"><div class="combo-head">Venues</div></template>
+          <template x-for="(v, i) in matches" :key="v">
+            <button type="button" class="combo-option" :class="i === active && 'active'" @mousedown.prevent="choose(v)" @mouseenter="active = i">
+              <span x-text="v"></span>
+            </button>
+          </template>
+          <button type="button" class="combo-option create" x-show="showCreate" :class="active === matches.length && 'active'"
+                  @mousedown.prevent="open = false" @mouseenter="active = matches.length">
+            <span>+ Add “<span x-text="query.trim()"></span>” as a new venue</span>
+          </button>
+        </div>
+        <div class="combo-status new" x-show="showCreate && !open" x-cloak>New venue: it will be added when you save</div>
+        {% for e in f.venue_name.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
     </div>
 
     <div class="grid grid-2 reveal" x-show="needsProject" style="margin-top:14px">

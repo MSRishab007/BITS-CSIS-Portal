@@ -31,6 +31,8 @@
     <div><dt>Order / PO no.</dt><dd>{{ purchase.order_number|default:"—" }}</dd></div>
     <div><dt>Purchase date</dt><dd>{{ purchase.purchase_date|date:"d M Y" }}</dd></div>
     <div><dt>Purchased by</dt><dd>{{ purchase.owner.full_name }}</dd></div>
+    <div><dt>Recorded</dt><dd>{{ purchase.created_at|date:"d M Y, H:i" }}<div class="small muted">by {{ purchase.created_by.full_name|default:"—" }}</div></dd></div>
+    <div><dt>Last changed</dt><dd>{% if last_change %}{{ last_change.when|date:"d M Y, H:i" }}<div class="small muted">by {{ last_change.who.full_name|default:"System" }}</div>{% else %}{{ purchase.updated_at|date:"d M Y, H:i" }}{% endif %}</dd></div>
     {% for key, value in purchase.extra.items %}
       <div><dt>{% with cf=custom|get_item:key %}{{ cf.label|default:key }}{% endwith %}</dt><dd>{% if value is True %}Yes{% elif value is False %}No{% else %}{{ value }}{% endif %}</dd></div>
     {% endfor %}

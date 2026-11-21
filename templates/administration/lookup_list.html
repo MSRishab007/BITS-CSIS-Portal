@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ cfg.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">Manage</div><h1>{{ cfg.title }}</h1><p>{{ cfg.help }}</p></div>
+  <div class="actions"><a class="btn btn-primary" href="{% url 'administration:lookup_add' kind %}">{% include "partials/icon.html" with name="plus" %} Add {{ cfg.singular }}</a></div>
+</div>
+{% include "administration/_tabs.html" %}
+
+<section class="card">
+  <form method="get" class="filters" style="grid-template-columns: 2fr 1fr auto">
+    <div class="field"><label for="q">Search</label><input type="search" id="q" name="q" value="{{ q }}"></div>
+    <div class="field"><label for="f-show">Show</label><select id="f-show" name="show" onchange="this.form.submit()">
+      <option value="all" {% if show == 'all' %}selected{% endif %}>All</option>
+      <option value="active" {% if show == 'active' %}selected{% endif %}>Shown in dropdowns</option>
+      <option value="hidden" {% if show == 'hidden' %}selected{% endif %}>Hidden</option></select></div>
+    <div class="actions"><button class="btn" type="submit">{% include "partials/icon.html" with name="search" %} Search</button></div>
+  </form>
+</section>
+
+<section class="card">
+  {% if objects %}
+  <div class="table-wrap" style="margin-top:-22px">
+    <table class="table">
+      <thead><tr>
+        <th>{% if kind == "fields" %}Label{% else %}Name{% endif %}</th>
+        {% if kind == "categories" %}<th class="right">Types</th>{% endif %}
+        {% if kind == "funding" %}<th>Asks for project no.</th>{% endif %}
+        {% if kind == "venues" %}<th>Building</th>{% endif %}
+        {% if kind == "vendors" %}<th>GSTIN</th><th>Added</th>{% endif %}
+        {% if kind == "fields" %}<th>Applies to</th><th>Type</th><th>Shown for</th>{% endif %}
+        {% if cfg.usage %}<th class="right">Used by</th>{% endif %}
+        <th>Status</th><th class="right">Actions</th>
+      </tr></thead>
+      <tbody class="stagger">
+      {% for o in objects %}
+        <tr style="--i: {{ forloop.counter0 }}">
+          <td><a class="row-link" href="{% url 'administration:lookup_edit' kind o.pk %}">{% if kind == "fields" %}{{ o.label }}{% else %}{{ o.name }}{% endif %}</a>
+            {% if kind == "fields" and o.required %}<span class="badge badge-accent">required</span>{% endif %}
+            {% if kind == "vendors" and o.contact_person %}<div class="small muted">{{ o.contact_person }}{% if o.phone %} · {{ o.phone }}{% endif %}</div>{% endif %}</td>
+          {% if kind == "categories" %}<td class="right">{{ o.type_count }}</td>{% endif %}
+          {% if kind == "funding" %}<td>{% if o.requires_project_details %}Yes{% else %}<span class="muted">No</span>{% endif %}</td>{% endif %}
+          {% if kind == "venues" %}<td>{{ o.building|default:"—" }}</td>{% endif %}
+          {% if kind == "vendors" %}<td class="mono small">{{ o.gstin|default:"—" }}</td>
+            <td class="small muted nowrap">{{ o.created_at|date:"d M Y" }}{% if o.created_by %}<br>{{ o.created_by.full_name }}{% endif %}</td>{% endif %}
+          {% if kind == "fields" %}<td>{{ o.get_applies_to_display }}</td><td>{{ o.get_field_type_display }}</td>
+            <td class="small">{% for c in o.categories.all %}{{ c.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">All</span>{% endfor %}</td>{% endif %}
+          {% if cfg.usage %}<td class="right">{{ o.usage }} {% if cfg.usage == "items" %}item{{ o.usage|pluralize }}{% else %}invoice{{ o.usage|pluralize }}{% endif %}</td>{% endif %}
+          <td>{% if o.is_active %}<span class="badge badge-ok">Shown</span>{% else %}<span class="badge">Hidden</span>{% endif %}</td>
+          <td class="right nowrap">
+            <a class="btn btn-sm btn-ghost" href="{% url 'administration:lookup_edit' kind o.pk %}">{% include "partials/icon.html" with name="edit" %} {% if kind == "categories" %}Edit / types{% else %}Edit{% endif %}</a>
+            <form method="post" action="{% url 'administration:lookup_toggle' kind o.pk %}" class="inline">{% csrf_token %}
+              <button class="btn btn-sm btn-ghost" type="submit">{% if o.is_active %}Hide{% else %}Show{% endif %}</button></form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><div class="empty-icon">{% include "partials/icon.html" with name="list" %}</div>
+    <h2>Nothing here yet</h2><p>Add the first {{ cfg.singular }}.</p>
+    <a class="btn btn-primary" href="{% url 'administration:lookup_add' kind %}">{% include "partials/icon.html" with name="plus" %} Add {{ cfg.singular }}</a></div>
+  {% endif %}
+</section>
+<p class="small muted">Entries are hidden rather than deleted, so purchases already recorded keep showing the right name.</p>
+{% endblock %}

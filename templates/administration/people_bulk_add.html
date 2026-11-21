@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Add many people{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">People</div><h1>Add many people at once</h1>
+    <p>Paste a list. Everyone gets a temporary password, shown once on the next page.</p></div>
+  <div class="actions"><a class="btn btn-ghost" href="{% url 'administration:people' %}">Cancel</a></div>
+</div>
+<form method="post" novalidate>
+  {% csrf_token %}
+  <section class="card">
+    {% if form.lines.errors %}<div class="form-errors">Nobody was added. Please fix these lines:<ul>{% for e in form.lines.errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+    <div class="field">
+      <label for="id_lines">{{ form.lines.label }}</label>{{ form.lines }}
+      <div class="help">{{ form.lines.help_text }}</div>
+    </div>
+  </section>
+  <div class="save-bar"><span class="muted small">All or nothing: if any line has a problem, no one is added.</span>
+    <button type="submit" class="btn btn-primary">{% include "partials/icon.html" with name="check" %} Add people</button></div>
+</form>
+{% endblock %}

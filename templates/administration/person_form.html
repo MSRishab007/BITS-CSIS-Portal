@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "add" %}Add person{% else %}{{ person.full_name }}{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">People</div><h1>{% if mode == "add" %}Add a person{% else %}{{ person.full_name }}{% endif %}</h1>
+    <p>{% if mode == "add" %}A temporary password is generated and shown once after saving.{% else %}Added {{ person.date_joined|date:"d M Y" }}{% if person.created_by %} by {{ person.created_by.full_name }}{% endif %} · last changed {{ person.updated_at|date:"d M Y, H:i" }}{% endif %}</p></div>
+  <div class="actions"><a class="btn btn-ghost" href="{% url 'administration:people' %}">Cancel</a></div>
+</div>
+<form method="post" novalidate>
+  {% csrf_token %}
+  <section class="card">
+    {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="grid grid-2">{% include "partials/form_fields.html" %}</div>
+    {% if mode == "edit" and person.pk == user.pk %}<p class="small muted" style="margin:14px 0 0">You can't change your own role.</p>{% endif %}
+  </section>
+  <div class="save-bar"><span class="muted small">{% if mode == "add" %}They'll be asked to choose their own password at first sign-in.{% else %}Status: {% if person.is_active %}active{% else %}deactivated{% endif %}{% endif %}</span>
+    <button type="submit" class="btn btn-primary">{% include "partials/icon.html" with name="check" %} {% if mode == "add" %}Add and generate password{% else %}Save changes{% endif %}</button></div>
+</form>
+{% if mode == "edit" %}{% include "partials/history.html" %}{% endif %}
+{% endblock %}

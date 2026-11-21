@@ -1,0 +1,21 @@
+{# Renders every field of a form; checkboxes inline, multi-checkboxes as a grid. #}
+{% for field in form %}
+  {% if field.is_hidden %}{{ field }}
+  {% elif field.widget_type == "checkbox" %}
+    <div class="field check{% if field.errors %} has-error{% endif %}">
+      <label>{{ field }} <span>{{ field.label }}</span></label>
+      {% if field.help_text %}<div class="help">{{ field.help_text|safe }}</div>{% endif %}
+      {% for e in field.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    </div>
+  {% elif field.widget_type == "checkboxselectmultiple" %}
+    <div class="field span-all checklist{% if field.errors %} has-error{% endif %}">
+      <label>{{ field.label }}</label>{{ field }}
+      {% if field.help_text %}<div class="help">{{ field.help_text|safe }}</div>{% endif %}
+      {% for e in field.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    </div>
+  {% elif field.widget_type == "textarea" %}
+    {% include "partials/field.html" with class="span-all" %}
+  {% else %}
+    {% include "partials/field.html" %}
+  {% endif %}
+{% endfor %}

@@ -101,6 +101,8 @@ media/             uploaded bills (private, git-ignored)
 | `/purchases/<id>/add-items/` | Add items to an invoice already recorded |
 | `/purchases/<id>/edit/`, `/delete/` | Owner, Admin or HoD only |
 | `/purchases/bulk/` | Bulk upload: template download, preview, import |
+| `/manage/people/` | Admin/HoD: add (one or many), edit, deactivate, reset passwords |
+| `/manage/lists/<kind>/` | Admin/HoD: categories & types, funding sources, venues, vendors, custom fields |
 | `/purchases/<id>/bill/` | Bill file, streamed only to people allowed to see the invoice |
 
 **Vendor box:** type to search existing vendors; pick one, or choose
@@ -141,6 +143,20 @@ Purchase (one invoice)          PurchaseItem (one line on the invoice)
 - **Custom fields:** Admin → Custom fields. Values are stored in the `extra`
   JSON column, so adding a field needs no database change.
 - **Lookup lists** are deactivated, not deleted, so old records keep their values.
+
+## Management rules
+
+- Admin and HoD use the **Manage** screens; `/admin/` is only needed for
+  technical work (superusers).
+- Only an Admin can create, edit or reset an Admin account or give the Admin role.
+- Nobody can change their own role or deactivate themselves there.
+- Lookup entries are hidden, never deleted; old records keep their values.
+
+## Dates recorded
+
+Every table has `created_at` and `updated_at`; users have `date_joined`.
+The change history additionally stores every version with who and when.
+Invoice pages show "Recorded … by …" and "Last changed … by …".
 
 ## Design notes
 

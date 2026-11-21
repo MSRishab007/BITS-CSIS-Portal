@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}People{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">Manage</div><h1>People</h1>
+    <p>{{ counts.active }} active · {{ counts.inactive }} deactivated. Deactivated people can't sign in; their records are kept.</p></div>
+  <div class="actions">
+    <a class="btn" href="{% url 'administration:people_bulk_add' %}">Add many</a>
+    <a class="btn btn-primary" href="{% url 'administration:person_add' %}">{% include "partials/icon.html" with name="plus" %} Add person</a>
+  </div>
+</div>
+{% include "administration/_tabs.html" %}
+
+<section class="card">
+  <form method="get" class="filters" style="grid-template-columns: 2fr 1fr 1fr auto">
+    <div class="field"><label for="q">Search</label><input type="search" id="q" name="q" value="{{ q }}" placeholder="Name, email, username, PSRN"></div>
+    <div class="field"><label for="f-role">Role</label><select id="f-role" name="role" onchange="this.form.submit()"><option value="">All roles</option>
+      {% for v, l in roles %}<option value="{{ v }}" {% if role == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="f-status">Status</label><select id="f-status" name="status" onchange="this.form.submit()">
+      <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+      <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Deactivated</option>
+      <option value="all" {% if status == 'all' %}selected{% endif %}>Everyone</option></select></div>
+    <div class="actions"><button class="btn" type="submit">{% include "partials/icon.html" with name="search" %} Search</button></div>
+  </form>
+</section>
+
+<section class="card">
+  {% if rows %}
+  <div class="table-wrap" style="margin-top:-22px">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Username</th><th>Role</th><th class="right">Invoices</th><th>Last sign-in</th><th class="right">Actions</th></tr></thead>
+      <tbody class="stagger">
+      {% for p, manageable in rows %}
+        <tr style="--i: {{ forloop.counter0 }}">
+          <td><strong>{{ p.full_name }}</strong>{% if p.pk == user.pk %} <span class="badge">you</span>{% endif %}
+            <div class="small muted">{{ p.email }}{% if p.designation %} · {{ p.designation }}{% endif %}</div></td>
+          <td class="mono small">{{ p.username }}</td>
+          <td><span class="badge {% if p.role == 'HOD' %}badge-accent{% elif p.role == 'ADMIN' %}badge-warn{% endif %}">{{ p.get_role_display }}</span>
+            {% if not p.is_active %}<span class="badge badge-error">Deactivated</span>{% elif p.must_change_password %}<span class="badge" title="Hasn't set their own password yet">Awaiting first sign-in</span>{% endif %}</td>
+          <td class="right">{{ p.invoice_count }}</td>
+          <td class="small nowrap">{{ p.last_login|date:"d M Y"|default:"Never" }}</td>
+          <td class="right"><div class="row-actions">
+            {% if manageable %}
+              <a class="btn btn-sm btn-ghost" href="{% url 'administration:person_edit' p.pk %}">{% include "partials/icon.html" with name="edit" %} Edit</a>
+              {% if p.pk != user.pk %}
+                {% if p.is_active %}<a class="btn btn-sm btn-ghost" href="{% url 'administration:person_reset' p.pk %}">Reset password</a>{% endif %}
+                <form method="post" action="{% url 'administration:person_toggle' p.pk %}" class="inline">{% csrf_token %}
+                  <button class="btn btn-sm btn-ghost {% if p.is_active %}btn-danger{% endif %}" type="submit">{% if p.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form>
+              {% endif %}
+            {% else %}<span class="small muted">Admin only</span>{% endif %}
+          </div></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><div class="empty-icon">{% include "partials/icon.html" with name="search" %}</div><h2>No one matches</h2><p>Try a different search or status.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

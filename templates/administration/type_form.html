@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ item_type.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">{{ item_type.category.name }} › Type</div><h1>{{ item_type.name }}</h1></div>
+  <div class="actions"><a class="btn btn-ghost" href="{% url 'administration:lookup_edit' 'categories' item_type.category_id %}">Back to {{ item_type.category.name }}</a></div>
+</div>
+<form method="post" novalidate>{% csrf_token %}
+  <section class="card" style="max-width:640px"><div class="grid">{% include "partials/form_fields.html" %}</div>
+    <button type="submit" class="btn btn-primary" style="margin-top:18px">Save</button></section>
+</form>
+{% endblock %}

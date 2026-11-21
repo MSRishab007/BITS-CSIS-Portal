@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{% if obj.pk %}{{ obj }}{% else %}Add {{ cfg.singular }}{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">{{ cfg.title }}</div>
+    <h1>{% if obj.pk %}{% if kind == "fields" %}{{ obj.label }}{% else %}{{ obj.name }}{% endif %}{% else %}Add {{ cfg.singular }}{% endif %}</h1>
+    {% if obj.pk %}<p>Created {{ obj.created_at|date:"d M Y" }} · last changed {{ obj.updated_at|date:"d M Y, H:i" }}</p>{% else %}<p>{{ cfg.help }}</p>{% endif %}</div>
+  <div class="actions"><a class="btn btn-ghost" href="{% url 'administration:lookups' kind %}">Back to {{ cfg.title|lower }}</a></div>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <section class="card">
+    {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    {% if kind == "fields" and obj.pk %}<p class="small muted" style="margin-top:0">Internal key: <span class="mono">{{ obj.key }}</span> (fixed, so values already entered stay linked).</p>{% endif %}
+    <div class="grid grid-2">{% include "partials/form_fields.html" %}</div>
+  </section>
+  <div class="save-bar"><span class="muted small">{% if kind == "categories" and not obj.pk %}After saving you can add this category's types.{% else %}Changes apply to new entries straight away.{% endif %}</span>
+    <button type="submit" class="btn btn-primary">{% include "partials/icon.html" with name="check" %} Save</button></div>
+</form>
+
+{% if kind == "categories" and obj.pk %}
+<section class="card">
+  <div class="card-head"><div><h2>Types in {{ obj.name }}</h2><p>Shown in the Type dropdown once this category is chosen.</p></div></div>
+  <form method="post" action="{% url 'administration:type_add' obj.pk %}" class="filters" style="grid-template-columns: 2fr 1fr auto; margin-bottom:18px">
+    {% csrf_token %}
+    <div class="field"><label for="id_type-name">New type</label>{{ type_form.name }}</div>
+    <div class="field"><label for="id_type-sort_order">Order</label>{{ type_form.sort_order }}</div>
+    <input type="hidden" name="type-is_active" value="on">
+    <div class="actions"><button type="submit" class="btn">{% include "partials/icon.html" with name="plus" %} Add type</button></div>
+  </form>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Type</th><th class="right">Order</th><th class="right">Used by</th><th>Status</th><th class="right">Actions</th></tr></thead>
+      <tbody>
+      {% for t in types %}
+        <tr><td><strong>{{ t.name }}</strong></td><td class="right">{{ t.sort_order }}</td><td class="right">{{ t.usage }} item{{ t.usage|pluralize }}</td>
+          <td>{% if t.is_active %}<span class="badge badge-ok">Shown</span>{% else %}<span class="badge">Hidden</span>{% endif %}</td>
+          <td class="right nowrap"><a class="btn btn-sm btn-ghost" href="{% url 'administration:type_edit' t.pk %}">Rename</a>
+            <form method="post" action="{% url 'administration:type_toggle' t.pk %}" class="inline">{% csrf_token %}
+              <button class="btn btn-sm btn-ghost" type="submit">{% if t.is_active %}Hide{% else %}Show{% endif %}</button></form></td></tr>
+      {% empty %}<tr><td colspan="5" class="muted">No types yet. Add one above.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% if obj.pk %}{% include "partials/history.html" %}{% endif %}
+{% if kind == "fields" %}
+<script>
+  // Show "Choices" only for dropdowns, and "Categories" only for item fields.
+  (function () {
+    const type = document.getElementById("id_field_type"), applies = document.getElementById("id_applies_to");
+    const box = (id) => document.getElementById(id)?.closest(".field");
+    function sync() {
+      const choices = box("id_choices"), cats = document.querySelector(".checklist");
+      if (choices) choices.style.display = type.value === "CHOICE" ? "" : "none";
+      if (cats) cats.style.display = applies.value === "ITEM" ? "" : "none";
+    }
+    type.addEventListener("change", sync); applies.addEventListener("change", sync); sync();
+  })();
+</script>
+{% endif %}
+{% endblock %}

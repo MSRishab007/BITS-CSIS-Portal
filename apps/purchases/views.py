@@ -215,6 +215,7 @@ def purchase_detail(request, pk):
         "items": items,
         "custom": custom,
         "history": history,
+        "last_change": history[0] if history else None,
         "can_edit": can_edit_purchase(request.user, purchase),
     })
 

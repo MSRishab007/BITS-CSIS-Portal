@@ -1,0 +1,14 @@
+{% load portal_tags %}
+{# Change history list for one record. Expects `history` (simple-history records). #}
+<section class="card">
+  <div class="card-head"><div><h2>Change history</h2><p>Who changed this, and when.</p></div></div>
+  {% if history %}
+  <ul class="timeline">
+    {% for h in history %}
+      <li><div><strong>{% if h.history_type == "+" %}Created{% elif h.history_type == "-" %}Deleted{% else %}Edited{% endif %}</strong>
+        {% if h.history_type == "~" and h.prev_record %}{% with d=h|history_changes %}{% if d %}<span class="muted">: {{ d|join:", " }}</span>{% endif %}{% endwith %}{% endif %}</div>
+        <div class="when">{{ h.history_date|date:"d M Y, H:i" }} · {{ h.history_user.full_name|default:"System" }}</div></li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No changes recorded yet.</p>{% endif %}
+</section>

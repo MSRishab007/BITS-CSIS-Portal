@@ -1,0 +1,6 @@
+<nav class="tabs">
+  <a href="{% url 'administration:people' %}" class="tab {% if section == 'people' %}active{% endif %}">People</a>
+  {% for key, c in lists.items %}
+    <a href="{% url 'administration:lookups' key %}" class="tab {% if kind == key %}active{% endif %}">{{ c.title }}</a>
+  {% endfor %}
+</nav>

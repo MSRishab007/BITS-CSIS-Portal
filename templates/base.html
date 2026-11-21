@@ -28,9 +28,13 @@
     </a>
     <a class="nav-link {% if path == '/purchases/bulk/' %}active{% endif %}" href="{% url 'purchases:bulk_upload' %}">
       {% include "partials/icon.html" with name="file" %} Bulk upload</a>
-    {% if user.is_staff %}
+    {% if user.can_manage_faculty %}
       <div class="nav-section">Manage</div>
-      <a class="nav-link" href="{% url 'admin:index' %}">{% include "partials/icon.html" with name="settings" %} Admin settings</a>
+      <a class="nav-link {% if path|slice:':15' == '/manage/people/' %}active{% endif %}" href="{% url 'administration:people' %}">{% include "partials/icon.html" with name="users" %} People</a>
+      <a class="nav-link {% if path|slice:':14' == '/manage/lists/' or path|slice:':14' == '/manage/types/' %}active{% endif %}" href="{% url 'administration:lookups_home' %}">{% include "partials/icon.html" with name="settings" %} Lists &amp; fields</a>
+    {% endif %}
+    {% if user.is_staff %}
+      <a class="nav-link" href="{% url 'admin:index' %}">{% include "partials/icon.html" with name="box" %} Technical admin</a>
     {% endif %}
     {% endwith %}
 

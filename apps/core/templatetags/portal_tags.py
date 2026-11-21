@@ -32,3 +32,13 @@ def inr(value):
             groups.insert(0, head)
         whole = ",".join(groups) + "," + tail
     return f"{sign}{whole}.{frac}"
+
+
+@register.filter
+def history_changes(record):
+    """Names of fields changed in this history record compared with the previous one."""
+    prev = getattr(record, "prev_record", None)
+    if prev is None:
+        return []
+    skip = {"updated_at", "deactivated_at", "name_key"}
+    return [c.field.replace("_", " ") for c in record.diff_against(prev).changes if c.field not in skip]

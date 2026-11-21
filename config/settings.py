@@ -4,6 +4,7 @@ Settings for the department asset & purchase portal.
 All environment-specific values come from a `.env` file (see `.env.example`),
 so the same code runs on a laptop and on the college server.
 """
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -251,7 +252,17 @@ LOGGING = {
         "axes": {"handlers": ["console"], "level": "WARNING", "propagate": False},
     },
 }
-if not DEBUG and env.bool("LOG_TO_FILE", default=True):
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+if TESTING:
+    # Many tests deliberately trigger refusals (403/404, lockouts, expired
+    # tokens). Don't print each one; failures are still reported normally.
+    LOGGING["root"]["level"] = "CRITICAL"
+    for name in ("django.request", "axes"):
+        LOGGING["loggers"][name]["level"] = "CRITICAL"
+    LOGGING["loggers"]["django.security"] = {"handlers": ["console"], "level": "CRITICAL", "propagate": False}
+    LOGGING["loggers"]["axes.handlers"] = {"handlers": ["console"], "level": "CRITICAL", "propagate": False}
+
+if not DEBUG and not TESTING and env.bool("LOG_TO_FILE", default=True):
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     LOGGING["handlers"]["file"] = {
         "class": "logging.handlers.RotatingFileHandler", "formatter": "plain",

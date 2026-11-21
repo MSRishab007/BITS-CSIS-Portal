@@ -1,0 +1,18 @@
+# Keep Linux line endings (LF) in the repository AND in working copies,
+# on every OS. Shell scripts with Windows line endings fail on the server.
+* text=auto eol=lf
+
+*.sh     text eol=lf
+*.py     text eol=lf
+*.service text eol=lf
+*.timer  text eol=lf
+*.conf   text eol=lf
+
+# Binary files: never touch
+*.png    binary
+*.jpg    binary
+*.ico    binary
+*.woff2  binary
+*.xlsx   binary
+*.pdf    binary
+*.sqlite3 binary

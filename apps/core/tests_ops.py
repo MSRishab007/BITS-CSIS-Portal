@@ -1,5 +1,6 @@
 """Tests for operations: backup/restore commands and Nginx bill hand-off."""
 import datetime
+import os
 import shutil
 import sqlite3
 import tarfile
@@ -52,7 +53,8 @@ class BackupRestoreTests(OpsBase):
         call_command("portal_backup", stdout=out)
         archives = list(self.backups.glob("portal-backup-*.tar.gz"))
         self.assertEqual(len(archives), 1)
-        self.assertEqual(archives[0].stat().st_mode & 0o777, 0o600)
+        if os.name != "nt":  # Windows has no Unix permission bits; the server (Linux) does
+            self.assertEqual(archives[0].stat().st_mode & 0o777, 0o600)
         with tarfile.open(archives[0]) as tar:
             names = tar.getnames()
         self.assertIn("db.sqlite3", names)

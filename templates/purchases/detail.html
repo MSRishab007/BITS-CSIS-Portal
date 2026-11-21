@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load portal_tags %}
+{% block title %}{{ purchase.invoice_number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Invoice</div>
+    <h1>{{ purchase.invoice_number }}</h1>
+    <p>{{ purchase.vendor }} · {{ purchase.purchase_date|date:"d M Y" }}{% if user.can_view_all_records %} · {{ purchase.owner.full_name }}{% endif %}</p>
+  </div>
+  <div class="actions">
+    {% if purchase.bill_file %}<a class="btn" href="{% url 'purchases:bill' purchase.pk %}" target="_blank">{% include "partials/icon.html" with name="file" %} View bill</a>{% endif %}
+    {% if can_edit %}
+      <a class="btn" href="{% url 'purchases:add_items' purchase.pk %}">{% include "partials/icon.html" with name="plus" %} Add items</a>
+      <a class="btn btn-primary" href="{% url 'purchases:edit' purchase.pk %}">{% include "partials/icon.html" with name="edit" %} Edit</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stats stagger">
+  <div class="card stat accent" style="--i:0"><div class="stat-label">Bill amount</div><div class="stat-value">₹{{ purchase.bill_amount|inr }}</div>
+    <div class="stat-note">Items total ₹{{ purchase.items_total|inr }}</div></div>
+  <div class="card stat" style="--i:1"><div class="stat-label">Items</div><div class="stat-value">{{ items|length }}</div></div>
+  <div class="card stat" style="--i:2"><div class="stat-label">Delivered</div><div class="stat-value" style="font-size:1.2rem;margin-top:10px">{{ purchase.delivery_date|date:"d M Y"|default:"—" }}</div></div>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Invoice details</h2></div>
+  <dl class="meta">
+    <div><dt>Vendor</dt><dd>{{ purchase.vendor }}{% if purchase.vendor.gstin %}<div class="small muted">GSTIN {{ purchase.vendor.gstin }}</div>{% endif %}</dd></div>
+    <div><dt>Order / PO no.</dt><dd>{{ purchase.order_number|default:"—" }}</dd></div>
+    <div><dt>Purchase date</dt><dd>{{ purchase.purchase_date|date:"d M Y" }}</dd></div>
+    <div><dt>Purchased by</dt><dd>{{ purchase.owner.full_name }}</dd></div>
+    {% for key, value in purchase.extra.items %}
+      <div><dt>{% with cf=custom|get_item:key %}{{ cf.label|default:key }}{% endwith %}</dt><dd>{% if value is True %}Yes{% elif value is False %}No{% else %}{{ value }}{% endif %}</dd></div>
+    {% endfor %}
+  </dl>
+  {% if purchase.remarks %}<p style="margin:18px 0 0"><span class="muted small">Remarks</span><br>{{ purchase.remarks|linebreaksbr }}</p>{% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Items</h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Item</th><th>Category</th><th class="right">Qty</th><th class="right">Amount</th><th>Funding</th><th>Venue</th><th>Warranty</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for it in items %}
+        <tr>
+          <td><strong>{{ it.item_name }}</strong>
+            {% if it.serial_number_list %}<div class="small muted mono">{{ it.serial_number_list|join:", " }}</div>{% endif %}
+            {% if it.asset_tag %}<div class="small muted">Tag {{ it.asset_tag }}</div>{% endif %}
+            {% for key, value in it.extra.items %}<div class="small muted">{% with cf=custom|get_item:key %}{{ cf.label|default:key }}{% endwith %}: {% if value is True %}Yes{% elif value is False %}No{% else %}{{ value }}{% endif %}</div>{% endfor %}
+            {% if it.remarks %}<div class="small" style="margin-top:4px">{{ it.remarks }}</div>{% endif %}</td>
+          <td>{{ it.category }}<div class="small muted">{{ it.item_type.name }}</div></td>
+          <td class="right">{{ it.quantity }}</td>
+          <td class="right nowrap">{% if it.amount is not None %}₹{{ it.amount|inr }}{% else %}—{% endif %}</td>
+          <td>{{ it.funding_source }}{% if it.project_number %}<div class="small muted">{{ it.project_number }}{% if it.principal_investigator %} · {{ it.principal_investigator }}{% endif %}</div>{% endif %}</td>
+          <td>{{ it.venue|default:"—" }}</td>
+          <td class="nowrap">{% if it.warranty_end_date %}{{ it.warranty_end_date|date:"d M Y" }}{% else %}—{% endif %}</td>
+          <td><span class="badge {% if it.status == 'IN_USE' %}badge-ok{% elif it.status == 'REPAIR' %}badge-warn{% elif it.status == 'DISPOSED' %}badge-error{% endif %}">{{ it.get_status_display }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><div><h2>Change history</h2><p>Every change to this invoice and its items.</p></div></div>
+  {% if history %}
+  <ul class="timeline">
+    {% for h in history %}
+      <li><div><strong>{{ h.what }}</strong> {{ h.subject }}{% if h.changes %}: <span class="muted">{{ h.changes|join:", " }}</span>{% endif %}</div>
+        <div class="when">{{ h.when|date:"d M Y, H:i" }} · {{ h.who.full_name|default:"System" }}</div></li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No changes recorded.</p>{% endif %}
+</section>
+
+{% if can_edit %}
+<p style="margin-top:22px"><a class="btn btn-ghost btn-danger btn-sm" href="{% url 'purchases:delete' purchase.pk %}">{% include "partials/icon.html" with name="trash" %} Delete this invoice</a></p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,71 @@
+{# One item row. Used for existing rows and (with __prefix__) as the template for new rows. #}
+<div class="item-wrap" x-data="itemRow"
+     data-category="{{ f.category.value|default_if_none:'' }}"
+     data-type="{{ f.item_type.value|default_if_none:'' }}"
+     data-funding="{{ f.funding_source.value|default_if_none:'' }}"
+     data-name="{{ f.item_name.value|default_if_none:'' }}"
+     data-deleted="{% if f.DELETE.value %}true{% else %}false{% endif %}"
+     data-more="{% if f.serial_numbers.errors or f.asset_tag.errors or f.status.errors or f.remarks.errors %}true{% else %}false{% endif %}">
+  {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+  <input type="checkbox" name="{{ f.prefix }}-DELETE" x-model="deleted" hidden>
+
+  <div class="item-removed" x-show="deleted" x-cloak>
+    <span>Removed: <strong x-text="name || 'item'"></strong>. It won't be saved.</span>
+    <button type="button" class="btn btn-sm" @click="deleted = false">{% include "partials/icon.html" with name="undo" %} Undo</button>
+  </div>
+
+  <div class="item-row" x-show="!deleted">
+    <div class="item-row-head">
+      <span class="item-index"><span class="num">{% include "partials/icon.html" with name="box" %}</span>
+        <span x-text="name || 'New item'">{{ f.item_name.value|default:"New item" }}</span></span>
+      <button type="button" class="btn btn-ghost btn-sm btn-danger" @click="deleted = true" title="Remove item">
+        {% include "partials/icon.html" with name="trash" %} Remove</button>
+    </div>
+
+    {% if f.non_field_errors %}<div class="form-errors">{{ f.non_field_errors|join:" " }}</div>{% endif %}
+
+    <div class="grid grid-4">
+      {% include "partials/field.html" with field=f.category %}
+      <div class="field{% if f.item_type.errors %} has-error{% endif %}">
+        <label for="id_{{ f.prefix }}-item_type">Type<span class="req">*</span></label>
+        <select name="{{ f.prefix }}-item_type" id="id_{{ f.prefix }}-item_type" x-model="type" :disabled="!category">
+          <option value="" x-text="category ? 'Select type' : 'Choose category first'">Select type</option>
+          <template x-for="t in types" :key="t.id">
+            <option :value="String(t.id)" x-text="t.name" :selected="String(t.id) === type"></option>
+          </template>
+        </select>
+        {% for e in f.item_type.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
+      {% include "partials/field.html" with field=f.item_name class="span-2" %}
+
+      {% include "partials/field.html" with field=f.quantity %}
+      {% include "partials/field.html" with field=f.amount hide_help=True label="Amount (₹, all units)" %}
+      {% include "partials/field.html" with field=f.funding_source %}
+      {% include "partials/field.html" with field=f.venue label="Venue (where it's placed)" %}
+    </div>
+
+    <div class="grid grid-2 reveal" x-show="needsProject" style="margin-top:14px">
+      {% include "partials/field.html" with field=f.project_number %}
+      {% include "partials/field.html" with field=f.principal_investigator %}
+    </div>
+
+    <div class="grid grid-4" style="margin-top:14px">
+      {% include "partials/field.html" with field=f.warranty_end_date label="Warranty ends on" %}
+      {% for bf, cf in f.extra_bound_fields %}
+        <div x-show="showField('{{ cf.key }}')">
+          {% include "partials/field.html" with field=bf label=cf.label %}
+          {% if cf.required %}<div class="help" style="margin-top:-2px">Required{% if cf.categories.all %} for {{ cf.categories.all|join:", " }}{% endif %}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <button type="button" class="btn btn-ghost btn-sm more-toggle" @click="more = !more"
+            x-text="more ? 'Hide extra details' : 'More details: serial numbers, asset tag, status, remarks'"></button>
+    <div class="grid grid-4 reveal" x-show="more" x-cloak style="margin-top:10px">
+      {% include "partials/field.html" with field=f.serial_numbers class="span-2" hide_help=True label="Serial numbers (one per line)" %}
+      {% include "partials/field.html" with field=f.remarks class="span-2" label="Remarks for this item" %}
+      {% include "partials/field.html" with field=f.asset_tag %}
+      {% include "partials/field.html" with field=f.status %}
+    </div>
+  </div>
+</div>

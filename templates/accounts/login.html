@@ -1,21 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Sign in{% endblock %}
-{% block main_class %}center{% endblock %}
-{% block content %}
-<div class="card narrow">
-  <h1>{{ PORTAL_NAME }}</h1>
-  <p class="muted">{{ DEPARTMENT_NAME }}</p>
+{% block auth_content %}
+<div class="card auth-card">
+  <div class="brand">
+    <span class="brand-mark">CS</span>
+    <span><span class="brand-name">{{ PORTAL_NAME }}</span><br><span class="brand-sub">{{ DEPARTMENT_NAME }}</span></span>
+  </div>
+  <h1>Welcome back</h1>
+  <p class="muted">Sign in with your BITS email or username.</p>
 
   <form method="post" novalidate>
     {% csrf_token %}
-    {% if form.non_field_errors %}
-      <div class="alert alert-error">{{ form.non_field_errors|join:" " }}</div>
-    {% endif %}
+    {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     {% include "partials/field.html" with field=form.username %}
     {% include "partials/field.html" with field=form.password %}
     <input type="hidden" name="next" value="{{ next }}">
-    <button type="submit" class="btn">Sign in</button>
+    <button type="submit" class="btn btn-primary btn-block">Sign in</button>
   </form>
-  <p class="muted small">Forgot your password? Ask the department office to reset it.</p>
+  <p class="muted small" style="margin-top:18px">Forgot your password? Ask the department office to reset it.</p>
 </div>
 {% endblock %}

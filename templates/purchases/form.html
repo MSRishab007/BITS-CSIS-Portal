@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if mode == "create" %}New purchase{% elif mode == "edit" %}Edit {{ purchase.invoice_number }}{% else %}Add items{% endif %}{% endblock %}
+{% block head %}<script src="{% static 'js/purchase-form.js' %}"></script>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    {% if mode == "create" %}
+      <div class="eyebrow">New purchase</div><h1>Record an invoice</h1>
+      <p>Enter the invoice details once, then add every item on it.</p>
+    {% elif mode == "edit" %}
+      <div class="eyebrow">Edit invoice</div><h1>{{ purchase.invoice_number }}</h1>
+      <p>{{ purchase.vendor }} · {{ purchase.purchase_date|date:"d M Y" }}</p>
+    {% else %}
+      <div class="eyebrow">Add items</div><h1>Add items to {{ purchase.invoice_number }}</h1>
+      <p>New items are added to this invoice; existing items stay as they are.</p>
+    {% endif %}
+  </div>
+  <div class="actions">
+    <a class="btn btn-ghost" href="{% if purchase %}{% url 'purchases:detail' purchase.pk %}{% else %}{% url 'purchases:list' %}{% endif %}">Cancel</a>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate x-data="purchaseForm"
+      data-bill-amount="{{ purchase.bill_amount|default_if_none:'' }}"
+      @input="recalc()" @change="recalc()" @recalc="recalc()" @submit="submitting = true">
+  {% csrf_token %}
+
+  {% if form.errors or formset.total_error_count %}
+    <div class="form-errors">Please fix the highlighted fields below.
+      {% if form.non_field_errors or formset.non_form_errors %}
+      <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}{% for e in formset.non_form_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if form %}
+  {# ---------------- Invoice details ---------------- #}
+  <section class="card">
+    <div class="card-head"><div><h2>Invoice</h2><p>Details printed on the bill.</p></div></div>
+    <div class="grid grid-3">
+      {% if form.owner %}{% include "partials/field.html" with field=form.owner %}{% endif %}
+
+      {# Invoice number: on a new purchase it also searches YOUR past invoices #}
+      <div class="field combo{% if form.invoice_number.errors %} has-error{% endif %}"
+           {% if mode == "create" %}x-data="invoicePicker" data-url="{% url 'purchases:api_my_invoices' %}"
+           data-initial="{{ form.invoice_number.value|default_if_none:'' }}" {% if form.owner %}data-owner-field="id_owner"{% endif %}
+           @click.outside="open = false"{% endif %}>
+        <label for="id_invoice_number">Invoice number<span class="req">*</span></label>
+        <input type="text" name="invoice_number" id="id_invoice_number" maxlength="60" autocomplete="off"
+               value="{{ form.invoice_number.value|default_if_none:'' }}"
+               {% if mode == "create" %}x-model="query" @focus="open = true; search()" @input.debounce.250ms="open = true; search()"
+               @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)" @keydown.enter="enter($event)"
+               @keydown.escape="open = false" placeholder="Type a new number, or find one of yours"{% endif %}>
+        {% if mode == "create" %}
+        <div class="combo-list" x-show="open && results.length" x-cloak
+             x-transition:enter="t-enter" x-transition:enter-start="t-from" x-transition:enter-end="t-to"
+             x-transition:leave="t-leave" x-transition:leave-start="t-to" x-transition:leave-end="t-from">
+          <div class="combo-head">Your past invoices: pick one to add items to it</div>
+          <template x-for="(r, i) in results" :key="r.id">
+            <a class="combo-option" :class="i === active && 'active'" :href="r.add_items_url" @mouseenter="active = i">
+              <span><strong x-text="r.invoice_number"></strong><br><span class="sub" x-text="r.vendor + ' · ' + r.date"></span></span>
+              <span class="sub right"><span x-text="r.amount"></span><br><span x-text="r.items + (r.items === 1 ? ' item' : ' items')"></span></span>
+            </a>
+          </template>
+        </div>
+        <div class="combo-status warn" x-show="duplicate" x-cloak>
+          You already recorded <span x-text="duplicate && duplicate.invoice_number"></span>
+          (<span x-text="duplicate && duplicate.vendor"></span>). <a :href="duplicate && duplicate.add_items_url">Add items to it instead →</a>
+        </div>
+        {% endif %}
+        {% for e in form.invoice_number.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
+
+      {# Vendor: pick an existing vendor or type a new one #}
+      <div class="field combo{% if form.vendor_name.errors %} has-error{% endif %}" x-data="vendorPicker"
+           data-url="{% url 'purchases:api_vendors' %}"
+           data-initial-name="{{ form.vendor_name.value|default_if_none:'' }}"
+           data-initial-id="{{ form.vendor.value|default_if_none:'' }}" @click.outside="open = false">
+        <label for="id_vendor_name">Vendor<span class="req">*</span></label>
+        <input type="hidden" name="vendor" :value="id">
+        <input type="text" name="vendor_name" id="id_vendor_name" maxlength="200" autocomplete="off"
+               x-model="query" @focus="open = true; search()" @input.debounce.200ms="onInput()" @blur="blur()"
+               @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)" @keydown.enter="enter($event)"
+               @keydown.escape="open = false" placeholder="Search vendors or type a new name">
+        <div class="combo-list" x-show="open && (results.length || showCreate)" x-cloak
+             x-transition:enter="t-enter" x-transition:enter-start="t-from" x-transition:enter-end="t-to"
+             x-transition:leave="t-leave" x-transition:leave-start="t-to" x-transition:leave-end="t-from">
+          <template x-if="results.length"><div class="combo-head">Existing vendors</div></template>
+          <template x-for="(v, i) in results" :key="v.id">
+            <button type="button" class="combo-option" :class="i === active && 'active'"
+                    @mousedown.prevent="choose(v)" @mouseenter="active = i">
+              <span x-text="v.name"></span>
+              <span class="sub" x-show="String(v.id) === id">{% include "partials/icon.html" with name="check" %}</span>
+            </button>
+          </template>
+          <button type="button" class="combo-option create" x-show="showCreate"
+                  :class="active === results.length && 'active'" @mousedown.prevent="chooseNew()"
+                  @mouseenter="active = results.length">
+            <span>+ Add “<span x-text="query.trim()"></span>” as a new vendor</span>
+          </button>
+        </div>
+        <div class="combo-status ok" x-show="id" x-cloak>{% include "partials/icon.html" with name="check" %} Existing vendor</div>
+        <div class="combo-status new" x-show="!id && query.trim() && !exact" x-cloak>New vendor: it will be added when you save</div>
+        <div class="combo-status ok" x-show="!id && exact" x-cloak>Matches “<span x-text="exact && exact.name"></span>”, which will be used</div>
+        {% for e in form.vendor_name.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
+
+      {% include "partials/field.html" with field=form.order_number %}
+      {% include "partials/field.html" with field=form.purchase_date %}
+      {% include "partials/field.html" with field=form.delivery_date %}
+      {% include "partials/field.html" with field=form.bill_amount %}
+
+      <div class="field span-2{% if form.bill_file.errors %} has-error{% endif %}">
+        <label for="id_bill_file">Bill (PDF or image, optional)</label>
+        {% if purchase.bill_file %}
+          <div class="small" style="margin-bottom:6px">Current file: <a href="{% url 'purchases:bill' purchase.pk %}" target="_blank">view bill</a>
+            · <label style="display:inline;font-weight:500"><input type="checkbox" name="bill_file-clear"> remove</label></div>
+        {% endif %}
+        <input type="file" name="bill_file" id="id_bill_file" accept=".pdf,.jpg,.jpeg,.png,.webp">
+        <div class="help">PDF, JPG, PNG or WEBP, up to 10 MB.{% if purchase.bill_file %} Choosing a file replaces the current one.{% endif %}</div>
+        {% for e in form.bill_file.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
+      {% include "partials/field.html" with field=form.remarks class="span-all" label="Remarks for this invoice" %}
+      {% for bf, cf in form.extra_bound_fields %}
+        {% include "partials/field.html" with field=bf label=cf.label %}
+      {% endfor %}
+    </div>
+  </section>
+  {% else %}
+  {# ---------------- Adding items to an existing invoice ---------------- #}
+  <section class="card">
+    <dl class="meta">
+      <div><dt>Invoice</dt><dd>{{ purchase.invoice_number }}</dd></div>
+      <div><dt>Vendor</dt><dd>{{ purchase.vendor }}</dd></div>
+      <div><dt>Purchase date</dt><dd>{{ purchase.purchase_date|date:"d M Y" }}</dd></div>
+      <div><dt>Bill amount</dt><dd>₹{{ purchase.bill_amount }}</dd></div>
+      <div><dt>Items so far</dt><dd>{{ purchase.items.count }}</dd></div>
+    </dl>
+  </section>
+  {% endif %}
+
+  {# ---------------- Items ---------------- #}
+  <section class="card">
+    <div class="card-head">
+      <div><h2>Items</h2><p>One row per kind of item. Use quantity for several identical units.</p></div>
+    </div>
+    {{ formset.management_form }}
+    <div x-ref="rows">
+      {% for f in formset %}{% include "purchases/_item_form.html" with f=f %}{% endfor %}
+    </div>
+    <template x-ref="emptyItem">{% include "purchases/_item_form.html" with f=formset.empty_form %}</template>
+    <button type="button" class="add-row" @click="addRow()">+ Add another item</button>
+  </section>
+
+  <div class="save-bar">
+    <div class="totals">
+      <span><strong x-text="itemCount">0</strong> item<span x-show="itemCount !== 1">s</span></span>
+      <span>Items total <strong x-text="money(itemsTotal)"></strong></span>
+      <template x-if="billAmount !== null">
+        <span>Bill <strong x-text="money(billAmount)"></strong>
+          <span class="badge badge-warn" x-show="itemsTotal > 0 && Math.abs(itemsTotal - billAmount) > 0.5"
+                x-text="itemsTotal > billAmount ? 'items exceed bill' : 'rest: tax / other'"></span></span>
+      </template>
+    </div>
+    <div class="actions">
+      <button type="submit" class="btn btn-primary" :disabled="submitting">
+        {% include "partials/icon.html" with name="check" %}
+        <span x-text="submitting ? 'Saving…' : '{% if mode == "add_items" %}Add items{% else %}Save invoice{% endif %}'">Save</span>
+      </button>
+    </div>
+  </div>
+
+  {{ form_data|json_script:"form-data" }}
+</form>
+{% endblock %}

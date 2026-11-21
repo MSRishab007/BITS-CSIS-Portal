@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Delete {{ purchase.invoice_number }}{% endblock %}
+{% block content %}
+<section class="card" style="max-width:560px">
+  <h1>Delete invoice {{ purchase.invoice_number }}?</h1>
+  <p class="muted">This removes the invoice from {{ purchase.vendor }} and its {{ purchase.items.count }} item{{ purchase.items.count|pluralize }}.
+    A copy is kept in the change history for audit.</p>
+  <form method="post" class="actions" style="margin-top:18px">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger-solid">{% include "partials/icon.html" with name="trash" %} Yes, delete</button>
+    <a class="btn btn-ghost" href="{% url 'purchases:detail' purchase.pk %}">Cancel</a>
+  </form>
+</section>
+{% endblock %}

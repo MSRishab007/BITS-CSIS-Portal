@@ -3,29 +3,74 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ PORTAL_NAME }}{% endblock %} · {{ DEPARTMENT_NAME }}</title>
-  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <title>{% block title %}{{ PORTAL_NAME }}{% endblock %} · {{ PORTAL_NAME }}</title>
+  <link rel="preload" href="{% static 'vendor/inter/inter-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block head %}{% endblock %}
+  <script defer src="{% static 'vendor/alpinejs/alpine-3.17.5.min.js' %}"></script>
 </head>
-<body class="{% block body_class %}{% endblock %}">
-  {% if user.is_authenticated %}
-  <header class="topbar">
-    <a class="brand" href="{% url 'core:home' %}">{{ PORTAL_NAME }}</a>
-    <nav>
-      <span class="muted">{{ user.full_name }} · {{ user.get_role_display }}</span>
-      {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
-      <a href="{% url 'accounts:password_change' %}">Change password</a>
-      <form method="post" action="{% url 'accounts:logout' %}" class="inline">
-        {% csrf_token %}<button type="submit" class="link">Sign out</button>
-      </form>
-    </nav>
-  </header>
-  {% endif %}
+<body>
+{% if user.is_authenticated and not user.must_change_password %}
+<div class="app" x-data="{ nav: false }">
+  <aside class="sidebar" :class="nav && 'open'">
+    <a class="brand" href="{% url 'core:home' %}">
+      <span class="brand-mark">CS</span>
+      <span><span class="brand-name">{{ PORTAL_NAME }}</span><br><span class="brand-sub">{{ DEPARTMENT_NAME }}</span></span>
+    </a>
 
-  <main class="{% block main_class %}container{% endblock %}">
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-    {% endfor %}
-    {% block content %}{% endblock %}
-  </main>
+    <a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a>
+
+    {% with path=request.path %}
+    <a class="nav-link {% if path == '/' %}active{% endif %}" href="{% url 'core:home' %}">{% include "partials/icon.html" with name="home" %} Dashboard</a>
+    <a class="nav-link {% if path|slice:':11' == '/purchases/' and path != '/purchases/new/' %}active{% endif %}" href="{% url 'purchases:list' %}">
+      {% include "partials/icon.html" with name="list" %} {% if user.can_view_all_records %}All purchases{% else %}My purchases{% endif %}
+    </a>
+    {% if user.is_staff %}
+      <div class="nav-section">Manage</div>
+      <a class="nav-link" href="{% url 'admin:index' %}">{% include "partials/icon.html" with name="settings" %} Admin settings</a>
+    {% endif %}
+    {% endwith %}
+
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <span class="avatar">{{ user.full_name|slice:":1"|upper }}</span>
+        <span><span class="name">{{ user.full_name }}</span><br><span class="role">{{ user.get_role_display }} · {{ user.username }}</span></span>
+      </div>
+      <div class="foot-links">
+        <a href="{% url 'accounts:password_change' %}">Password</a>
+        <form method="post" action="{% url 'accounts:logout' %}" class="inline">{% csrf_token %}<button type="submit" class="link">Sign out</button></form>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" x-show="nav" x-cloak @click="nav = false" x-transition.opacity></div>
+
+  <div class="main">
+    <div class="mobile-bar">
+      <button class="btn btn-ghost btn-sm" @click="nav = true" aria-label="Open menu">{% include "partials/icon.html" with name="menu" %}</button>
+      <strong>{{ PORTAL_NAME }}</strong>
+    </div>
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+<main class="auth">{% block auth_content %}{% endblock %}</main>
+{% endif %}
+
+{% if messages %}
+<div class="toasts">
+  {% for message in messages %}
+  <div class="toast {{ message.tags }}" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)"
+       x-transition:enter="t-enter" x-transition:enter-start="t-from" x-transition:enter-end="t-to"
+       x-transition:leave="t-leave" x-transition:leave-start="t-to" x-transition:leave-end="t-from" role="status">
+    <span class="dot"></span><span>{{ message }}</span>
+    <button type="button" @click="show = false" aria-label="Dismiss">×</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% block scripts %}{% endblock %}
 </body>
 </html>

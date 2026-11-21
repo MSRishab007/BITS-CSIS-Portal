@@ -1,13 +1,54 @@
 {% extends "base.html" %}
-{% block title %}Home{% endblock %}
+{% load portal_tags %}
+{% block title %}Dashboard{% endblock %}
 {% block content %}
-<div class="card">
-  <h1>Welcome, {{ user.get_short_name }}</h1>
-  <dl class="details">
-    <dt>Email</dt><dd>{{ user.email }}</dd>
-    <dt>Username</dt><dd>{{ user.username }}</dd>
-    <dt>Role</dt><dd>{{ user.get_role_display }}</dd>
-  </dl>
-  <p class="muted">The purchase dashboard will appear here.</p>
+<div class="page-head">
+  <div>
+    <div class="eyebrow">{% now "l, d F" %}</div>
+    <h1>Hello, {{ user.get_short_name }}</h1>
+    <p>{% if user.can_view_all_records %}Department-wide overview of purchases.{% else %}An overview of your purchases.{% endif %}</p>
+  </div>
+  <div class="actions"><a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a></div>
 </div>
+
+<div class="stats stagger">
+  <div class="card stat accent" style="--i:0"><div class="stat-label">Total spend</div><div class="stat-value">₹{{ total_spend|inr }}</div><div class="stat-note">across all invoices</div></div>
+  <div class="card stat" style="--i:1"><div class="stat-label">Invoices</div><div class="stat-value">{{ invoice_count }}</div></div>
+  <div class="card stat" style="--i:2"><div class="stat-label">Units purchased</div><div class="stat-value">{{ item_units }}</div></div>
+  <div class="card stat" style="--i:3"><div class="stat-label">Warranties ending in 30 days</div><div class="stat-value">{{ expiring_count }}</div></div>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Recent invoices</h2><a href="{% url 'purchases:list' %}" class="small">View all →</a></div>
+  {% if recent %}
+  <div class="table-wrap">
+    <table class="table"><tbody>
+    {% for p in recent %}
+      <tr><td class="nowrap muted">{{ p.purchase_date|date:"d M Y" }}</td>
+        <td><a class="row-link" href="{% url 'purchases:detail' p.pk %}">{{ p.invoice_number }}</a></td>
+        <td>{{ p.vendor }}</td>{% if user.can_view_all_records %}<td>{{ p.owner.full_name }}</td>{% endif %}
+        <td class="right">{{ p.item_count }} item{{ p.item_count|pluralize }}</td>
+        <td class="right nowrap">₹{{ p.bill_amount|inr }}</td></tr>
+    {% endfor %}
+    </tbody></table>
+  </div>
+  {% else %}
+  <div class="empty" style="padding:24px">
+    <div class="empty-icon">{% include "partials/icon.html" with name="receipt" %}</div>
+    <h2>Nothing here yet</h2><p>Record your first invoice to see it here.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% if expiring %}
+<section class="card">
+  <div class="card-head"><h2>Warranties ending soon</h2></div>
+  <ul class="timeline">
+    {% for it in expiring %}
+      <li><a href="{% url 'purchases:detail' it.purchase_id %}"><strong>{{ it.item_name }}</strong></a>
+        <div class="when">Ends {{ it.warranty_end_date|date:"d M Y" }} · invoice {{ it.purchase.invoice_number }}</div></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 {% endblock %}

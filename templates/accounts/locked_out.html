@@ -1,11 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Too many attempts{% endblock %}
-{% block main_class %}center{% endblock %}
-{% block content %}
-<div class="card narrow">
+{% block auth_content %}
+<div class="card auth-card">
+  <div class="empty-icon">{% include "partials/icon.html" with name="clock" %}</div>
   <h1>Too many sign-in attempts</h1>
-  <p>This account is locked for 15 minutes after 5 incorrect passwords.</p>
-  <p class="muted">Try again later, or ask the department office to reset your password.</p>
-  <a class="btn" href="{% url 'accounts:login' %}">Back to sign in</a>
+  <p class="muted">This account is locked for 15 minutes after 5 incorrect passwords. Try again later, or ask the department office to reset your password.</p>
+  <a class="btn btn-primary btn-block" href="{% url 'accounts:login' %}">Back to sign in</a>
 </div>
 {% endblock %}

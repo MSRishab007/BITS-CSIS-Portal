@@ -90,6 +90,27 @@ media/             uploaded bills (private, git-ignored)
 - **Lockout:** 5 wrong passwords lock that account for 15 minutes.
   Unlock early from Admin → Axes → Access attempts (delete the entry).
 
+## Portal screens
+
+| URL | Screen |
+|---|---|
+| `/` | Dashboard: totals, recent invoices, warranties ending soon |
+| `/purchases/` | Invoice list with search and filters (faculty: own; Admin/HoD: all) |
+| `/purchases/new/` | Record an invoice and its items |
+| `/purchases/<id>/` | Invoice details, items, change history |
+| `/purchases/<id>/add-items/` | Add items to an invoice already recorded |
+| `/purchases/<id>/edit/`, `/delete/` | Owner, Admin or HoD only |
+| `/purchases/<id>/bill/` | Bill file, streamed only to people allowed to see the invoice |
+
+**Vendor box:** type to search existing vendors; pick one, or choose
+*Add "…" as a new vendor*. A typed name that matches an existing vendor
+(ignoring case, spaces and punctuation) uses that vendor.
+**Invoice number box:** while typing, shows *your own* past invoices; picking
+one opens "add items" for it. Typing a new number starts a new invoice.
+
+Front end: Django templates + Alpine.js (in `static/vendor/`, no build step),
+styles in `static/css/app.css`, form behaviour in `static/js/purchase-form.js`.
+
 ## Data model
 
 ```

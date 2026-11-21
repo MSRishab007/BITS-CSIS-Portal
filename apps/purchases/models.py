@@ -29,6 +29,11 @@ def bill_upload_to(instance, filename):
     return f"bills/{timezone.now():%Y}/{uuid.uuid4().hex}{ext}"
 
 
+def can_edit_purchase(user, purchase) -> bool:
+    """Owner can edit their own invoice; Admin/HoD can edit any."""
+    return user.is_authenticated and (user.can_view_all_records or purchase.owner_id == user.pk)
+
+
 class PurchaseQuerySet(models.QuerySet):
     def visible_to(self, user):
         """Admin/HoD see every invoice; faculty see only their own."""
@@ -106,10 +111,12 @@ class Purchase(TimeStampedModel):
                 errors["invoice_number"] = (
                     f"Invoice {clash.invoice_number} from {self.vendor} is already recorded by {who}."
                 )
-        try:
-            self.extra = clean_extra(CustomField.AppliesTo.PURCHASE, self.extra)
-        except ValidationError as e:
-            errors["extra"] = e.messages
+        # Skipped when a portal form has already checked (and reported) these.
+        if not getattr(self, "_extra_checked_by_form", False):
+            try:
+                self.extra = clean_extra(CustomField.AppliesTo.PURCHASE, self.extra)
+            except ValidationError as e:
+                errors["extra"] = e.messages
         if errors:
             raise ValidationError(errors)
 
@@ -190,16 +197,19 @@ class PurchaseItem(TimeStampedModel):
             errors["item_type"] = f"'{self.item_type.name}' is not a type under {self.category.name}."
         if self.funding_source_id and self.funding_source.requires_project_details and not self.project_number.strip():
             errors["project_number"] = f"Project / grant number is required for {self.funding_source.name}."
-        if (self.warranty_end_date and self.purchase_id and self.purchase.purchase_date
-                and self.warranty_end_date < self.purchase.purchase_date):
+        # getattr: works for a purchase that is still being created (not saved yet)
+        purchase = getattr(self, "purchase", None)
+        if (self.warranty_end_date and purchase is not None and purchase.purchase_date
+                and self.warranty_end_date < purchase.purchase_date):
             errors["warranty_end_date"] = "Warranty can't end before the purchase date."
-        try:
-            self.extra = clean_extra(
-                CustomField.AppliesTo.ITEM, self.extra,
-                category=self.category if self.category_id else None,
-            )
-        except ValidationError as e:
-            errors["extra"] = e.messages
+        if not getattr(self, "_extra_checked_by_form", False):
+            try:
+                self.extra = clean_extra(
+                    CustomField.AppliesTo.ITEM, self.extra,
+                    category=self.category if self.category_id else None,
+                )
+            except ValidationError as e:
+                errors["extra"] = e.messages
         if errors:
             raise ValidationError(errors)
 

@@ -164,8 +164,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_full_name(self):
         return self.full_name
 
+    TITLES = {"prof", "prof.", "dr", "dr.", "mr", "mr.", "ms", "ms.", "mrs", "mrs."}
+
     def get_short_name(self):
-        return self.full_name.split(" ")[0] if self.full_name else self.email
+        """First name, skipping titles: 'Prof. Navneet Goyal' -> 'Navneet'."""
+        words = [w for w in (self.full_name or "").split() if w.lower() not in self.TITLES]
+        return words[0] if words else (self.full_name or self.email)
 
     # ---- Role helpers: the single place permissions are decided ----------
     @property

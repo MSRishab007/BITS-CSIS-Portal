@@ -49,6 +49,11 @@ class UserModelTests(TestCase):
         with self.assertRaises(ValidationError):
             User.objects.create_user(f"d@{DOMAIN}", "x", full_name="D", employee_id="P123")
 
+    def test_short_name_skips_titles(self):
+        u = User(full_name="Prof. Navneet Goyal")
+        self.assertEqual(u.get_short_name(), "Navneet")
+        self.assertEqual(User(full_name="Dr Anita Sharma").get_short_name(), "Anita")
+
     def test_deactivation_timestamp(self):
         u = User.objects.create_user(f"t@{DOMAIN}", "x", full_name="T")
         u.is_active = False

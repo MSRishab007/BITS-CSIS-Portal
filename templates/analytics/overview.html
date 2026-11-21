@@ -9,25 +9,17 @@
     <p>{% if user.can_view_all_records %}Department-wide spending.{% else %}Your purchases only.{% endif %} Click a bar's name to filter by it.</p>
   </div>
   <div class="actions">
-    <a class="btn" href="{% url 'purchases:export' %}?{{ querystring }}">{% include "partials/icon.html" with name="download" %} Export to Excel</a>
+    <nav class="segmented" aria-label="Period"><span class="thumb"></span>
+      {% for v, l, qs in period_links %}<a href="?{{ qs }}" class="{% if f.period == v %}on{% endif %}">{% if v == "this_fy" %}This FY{% elif v == "last_fy" %}Last FY{% elif v == "last_12m" %}12 months{% else %}All time{% endif %}</a>{% endfor %}
+    </nav>
+    <a class="btn" href="{% url 'purchases:export' %}?{{ querystring }}">{% include "partials/icon.html" with name="download" %} Export</a>
   </div>
 </div>
 
-<section class="card">{% include "purchases/_filters.html" %}</section>
+<section class="card">{% include "purchases/_filters.html" with hide_period=True %}</section>
 
-<div class="stats stagger">
-  <div class="card stat accent" style="--i:0">
-    <div class="stat-label">{% if item_level %}Spend on matching items{% else %}Total spend{% endif %}</div>
-    <div class="stat-value">₹{{ spend|inr }}</div>
-    <div class="stat-note">{% if item_level %}from item amounts{% else %}sum of bill amounts{% endif %}</div>
-  </div>
-  <div class="card stat" style="--i:1"><div class="stat-label">Invoices</div><div class="stat-value">{{ invoice_count }}</div>
-    <div class="stat-note">{% if avg_invoice %}avg {{ avg_invoice|inr_compact }} each{% else %}&nbsp;{% endif %}</div></div>
-  <div class="card stat" style="--i:2"><div class="stat-label">Units purchased</div><div class="stat-value">{{ units }}</div>
-    <div class="stat-note">across {{ item_count }} item line{{ item_count|pluralize }}</div></div>
-  <div class="card stat" style="--i:3"><div class="stat-label">Warranties ending</div><div class="stat-value">{{ expiring_30 }}</div>
-    <div class="stat-note">in the next 30 days</div></div>
-</div>
+{% if item_level %}{% include "analytics/_kpis.html" with spend_label="Spend on matching items" spend_note="from item amounts" %}
+{% else %}{% include "analytics/_kpis.html" with spend_label="Total spend" spend_note="sum of bill amounts" %}{% endif %}
 
 {% if item_count and with_amount < item_count %}
 <div class="alert alert-info">{{ with_amount }} of {{ item_count }} items have an item amount. The category and funding charts only add up items with an amount.</div>
@@ -66,8 +58,8 @@
 </section>
 
 <div class="viz-grid">
-  {% include "analytics/_hbar.html" with rows=by_category title="By category" note="Item amounts." unit="item" param="category" label_header="Category" %}
-  {% include "analytics/_hbar.html" with rows=by_funding title="By funding source" note="Item amounts." unit="item" param="funding" label_header="Funding source" %}
+  {% include "analytics/_donut.html" with segs=donut_category table_rows=by_category title="Share by category" note="Item amounts. Hover a slice; click a name to filter." total=item_amount param="category" %}
+  {% include "analytics/_donut.html" with segs=donut_funding table_rows=by_funding title="Share by funding source" note="Item amounts." total=item_amount param="funding" %}
   {% if item_level %}
     {% include "analytics/_hbar.html" with rows=by_vendor title="Top vendors" note="Item amounts on matching items." unit="item" label_header="Vendor" %}
   {% else %}

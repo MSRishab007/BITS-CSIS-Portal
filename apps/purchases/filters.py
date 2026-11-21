@@ -159,10 +159,11 @@ class PurchaseFilter:
             out.append(("Search", self.q))
         return out
 
-    def querystring(self) -> str:
+    def querystring(self, period=None) -> str:
+        """Query string for these filters (optionally with a different period)."""
         from urllib.parse import urlencode
-        params = {"period": self.period}
-        if self.period == "custom":
+        params = {"period": period or self.period}
+        if params["period"] == "custom":
             if self.date_from:
                 params["from"] = self.date_from.isoformat()
             if self.date_to:

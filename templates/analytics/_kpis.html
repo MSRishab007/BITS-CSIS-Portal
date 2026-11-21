@@ -1,0 +1,22 @@
+{% load portal_tags %}
+{# KPI tiles with Apple-Pay tilt and count-up. #}
+<div class="stats stagger">
+  <div class="card stat accent tilt" style="--i:0" data-tilt="6">
+    <span class="glare"></span>
+    <div class="stat-label depth-1">{{ spend_label }}</div>
+    <div class="stat-value depth-2" data-count="{{ spend|floatformat:2|cut:',' }}" data-decimals="2" data-prefix="₹">₹{{ spend|inr }}</div>
+    <div class="stat-note depth-1">{{ spend_note }}</div>
+  </div>
+  <div class="card stat tilt" style="--i:1"><span class="glare"></span>
+    <div class="stat-label depth-1">Invoices</div>
+    <div class="stat-value depth-2" data-count="{{ invoice_count }}">{{ invoice_count }}</div>
+    <div class="stat-note depth-1">{% if avg_invoice %}avg {{ avg_invoice|inr_compact }} each{% else %}&nbsp;{% endif %}</div></div>
+  <div class="card stat tilt" style="--i:2"><span class="glare"></span>
+    <div class="stat-label depth-1">Units purchased</div>
+    <div class="stat-value depth-2" data-count="{{ units }}">{{ units }}</div>
+    <div class="stat-note depth-1">across {{ item_count }} item line{{ item_count|pluralize }}</div></div>
+  <div class="card stat tilt" style="--i:3"><span class="glare"></span>
+    <div class="stat-label depth-1">Warranties ending</div>
+    <div class="stat-value depth-2" data-count="{{ expiring_30 }}">{{ expiring_30 }}</div>
+    <div class="stat-note depth-1">in the next 30 days</div></div>
+</div>

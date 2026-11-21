@@ -4,6 +4,13 @@
   <div class="field"><label for="q">Search</label>
     <input type="search" id="q" name="q" value="{{ f.q }}" placeholder="Invoice, vendor, item, serial no.…"></div>
   {% endif %}
+  {% if hide_period %}
+  <input type="hidden" name="period" :value="period">
+  <div class="field"><label for="f-from">From</label>
+    <input type="date" id="f-from" name="from" value="{{ f.date_from|date:'Y-m-d' }}" @change="period = 'custom'"></div>
+  <div class="field"><label for="f-to">To</label>
+    <input type="date" id="f-to" name="to" value="{{ f.date_to|date:'Y-m-d' }}" @change="period = 'custom'"></div>
+  {% else %}
   <div class="field"><label for="f-period">Period</label>
     <select id="f-period" name="period" x-model="period" @change="period !== 'custom' && $el.form.submit()">
       {% for v, l in periods %}<option value="{{ v }}" {% if f.period == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
@@ -12,6 +19,7 @@
     <input type="date" id="f-from" name="from" value="{{ f.date_from|date:'Y-m-d' }}" :disabled="period !== 'custom'"></div>
   <div class="field" x-show="period === 'custom'" x-cloak><label for="f-to">To</label>
     <input type="date" id="f-to" name="to" value="{{ f.date_to|date:'Y-m-d' }}" :disabled="period !== 'custom'"></div>
+  {% endif %}
   <div class="field"><label for="f-cat">Category</label>
     <select id="f-cat" name="category" onchange="this.form.submit()"><option value="">All categories</option>
       {% for c in categories %}<option value="{{ c.id }}" {% if f.category == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}

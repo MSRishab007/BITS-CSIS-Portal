@@ -4,49 +4,81 @@
 {% block content %}
 <div class="page-head">
   <div>
-    <div class="eyebrow">{% now "l, d F" %}</div>
-    <h1>Hello, {{ user.get_short_name }}</h1>
-    <p>{% if user.can_view_all_records %}Department-wide overview of purchases.{% else %}An overview of your purchases.{% endif %}</p>
+    <div class="eyebrow">{% now "l, d F" %} · {{ fy_label }}</div>
+    <h1>{% now "G" as hour %}{% if hour|add:0 < 12 %}Good morning{% elif hour|add:0 < 17 %}Good afternoon{% else %}Good evening{% endif %}, {{ user.get_short_name }}</h1>
+    <p>{% if user.can_view_all_records %}Department purchases this financial year.{% else %}Your purchases this financial year.{% endif %}</p>
   </div>
-  <div class="actions"><a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a></div>
+  <div class="actions">
+    <a class="btn" href="{% url 'analytics:overview' %}">{% include "partials/icon.html" with name="chart" %} Analytics</a>
+    <a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a>
+  </div>
 </div>
 
-<div class="stats stagger">
-  <div class="card stat accent" style="--i:0"><div class="stat-label">Total spend</div><div class="stat-value">₹{{ total_spend|inr }}</div><div class="stat-note">across all invoices</div></div>
-  <div class="card stat" style="--i:1"><div class="stat-label">Invoices</div><div class="stat-value">{{ invoice_count }}</div></div>
-  <div class="card stat" style="--i:2"><div class="stat-label">Units purchased</div><div class="stat-value">{{ item_units }}</div></div>
-  <div class="card stat" style="--i:3"><div class="stat-label">Warranties ending in 30 days</div><div class="stat-value">{{ expiring_count }}</div></div>
+{% include "analytics/_kpis.html" with spend_label="Spend this year" spend_note="sum of bill amounts" %}
+
+<div class="viz-grid" style="margin-top:0">
+  <section class="card viz-card">
+    <div class="card-head"><div><h2>Spend by month</h2><p>{{ fy_label }}, bill amounts.</p></div>
+      <a class="btn btn-ghost btn-sm" href="{% url 'analytics:overview' %}">Details {% include "partials/icon.html" with name="arrow-right" %}</a></div>
+    {% if monthly %}
+    <div class="vchart" style="height:220px">
+      <div class="vchart-axis">{% for t in ticks %}<span>{{ t|inr_compact }}</span>{% endfor %}</div>
+      <div class="vchart-plot">
+        <div class="vchart-grid">{% for t in ticks %}<span></span>{% endfor %}</div>
+        <div class="vchart-bars" style="--n: {{ monthly|length }}">
+          {% for m in monthly %}
+          <div class="vbar" tabindex="0" style="--i: {{ forloop.counter0 }}; --h: {{ m.pct }}%">
+            <span class="vbar-fill{% if not m.value %} is-zero{% endif %}"></span>
+            <span class="viz-tip"><strong>{{ m.month|date:"F Y" }}</strong><br>₹{{ m.value|inr }}</span>
+            <span class="vbar-label">{{ m.month|date:"M" }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% else %}<p class="muted viz-empty">No purchases yet this year.</p>{% endif %}
+  </section>
+  {% include "analytics/_donut.html" with segs=donut_category table_rows=by_category title="Share by category" note="Item amounts this year." total=item_amount %}
 </div>
 
-<section class="card">
-  <div class="card-head"><h2>Recent invoices</h2><a href="{% url 'purchases:list' %}" class="small">View all →</a></div>
-  {% if recent %}
-  <div class="table-wrap">
-    <table class="table"><tbody>
-    {% for p in recent %}
-      <tr><td class="nowrap muted">{{ p.purchase_date|date:"d M Y" }}</td>
-        <td><a class="row-link" href="{% url 'purchases:detail' p.pk %}">{{ p.invoice_number }}</a></td>
-        <td>{{ p.vendor }}</td>{% if user.can_view_all_records %}<td>{{ p.owner.full_name }}</td>{% endif %}
-        <td class="right">{{ p.item_count }} item{{ p.item_count|pluralize }}</td>
-        <td class="right nowrap">₹{{ p.bill_amount|inr }}</td></tr>
-    {% endfor %}
-    </tbody></table>
-  </div>
-  {% else %}
-  <div class="empty" style="padding:24px">
-    <div class="empty-icon">{% include "partials/icon.html" with name="receipt" %}</div>
-    <h2>Nothing here yet</h2><p>Record your first invoice to see it here.</p>
-  </div>
-  {% endif %}
-</section>
+<div class="viz-grid">
+  <section class="card span-all">
+    <div class="card-head"><div><h2>Recently recorded</h2><p>Latest invoices added to the portal.</p></div>
+      <a href="{% url 'purchases:list' %}" class="btn btn-ghost btn-sm">View all {% include "partials/icon.html" with name="arrow-right" %}</a></div>
+    {% if recent %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Invoice</th><th>Vendor</th>{% if user.can_view_all_records %}<th>Faculty</th>{% endif %}<th>Purchased</th><th class="right">Items</th><th class="right">Bill</th></tr></thead>
+        <tbody class="stagger">
+        {% for p in recent %}
+          <tr style="--i: {{ forloop.counter0 }}">
+            <td><a class="row-link mono" href="{% url 'purchases:detail' p.pk %}">{{ p.invoice_number }}</a></td>
+            <td>{{ p.vendor }}</td>{% if user.can_view_all_records %}<td>{{ p.owner.full_name }}</td>{% endif %}
+            <td class="nowrap muted">{{ p.purchase_date|date:"d M Y" }}</td>
+            <td class="right">{{ p.item_count }}</td>
+            <td class="right nowrap">₹{{ p.bill_amount|inr }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty" style="padding:24px">
+      <div class="empty-icon">{% include "partials/icon.html" with name="receipt" %}</div>
+      <h2>Nothing here yet</h2><p>Record your first invoice, or upload many at once.</p>
+      <div class="actions" style="justify-content:center"><a class="btn btn-primary" href="{% url 'purchases:create' %}">New purchase</a>
+        <a class="btn" href="{% url 'purchases:bulk_upload' %}">Bulk upload</a></div>
+    </div>
+    {% endif %}
+  </section>
+</div>
 
 {% if expiring %}
-<section class="card">
-  <div class="card-head"><h2>Warranties ending soon</h2></div>
+<section class="card" style="margin-top:16px">
+  <div class="card-head"><div><h2>Warranties ending soon</h2><p>Next 60 days.</p></div></div>
   <ul class="timeline">
     {% for it in expiring %}
       <li><a href="{% url 'purchases:detail' it.purchase_id %}"><strong>{{ it.item_name }}</strong></a>
-        <div class="when">Ends {{ it.warranty_end_date|date:"d M Y" }} · invoice {{ it.purchase.invoice_number }}</div></li>
+        <div class="when">Ends {{ it.warranty_end_date|date:"d M Y" }} ({{ it.warranty_end_date|timeuntil }}) · invoice <span class="mono">{{ it.purchase.invoice_number }}</span></div></li>
     {% endfor %}
   </ul>
 </section>

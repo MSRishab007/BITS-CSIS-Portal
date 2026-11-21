@@ -122,7 +122,24 @@ Admin/HoD templates have a "Faculty email or username" column for uploading
 on behalf of faculty. Code: `apps/purchases/bulk.py`.
 
 Front end: Django templates + Alpine.js (in `static/vendor/`, no build step),
-styles in `static/css/app.css`, form behaviour in `static/js/purchase-form.js`.
+styles in `static/css/app.css`, site-wide behaviour in `static/js/app.js`,
+form behaviour in `static/js/purchase-form.js`.
+
+### Design system
+
+- Neutral base (Vercel-like), Geist font (Geist Mono for invoice/serial numbers).
+- Primary colour: BITS sky blue (`--accent`, deepened to `#0B7CAD` for contrast;
+  the logo blue `#5AC6E4` in dark mode). Change it in one place in `app.css`.
+- BITS tri-colour (blue · red · yellow) as a signature: sidebar stripe, page-change
+  progress bar, eyebrow marks, toast timers, avatar ring. **Red never appears alone**
+  except for errors, which use their own darker red.
+- Motion: staggered entrances, Apple-Pay style tilt on KPI cards (`.tilt`),
+  count-up numbers (`data-count`), sliding nav/segmented indicators, donut
+  draw-in, page cross-fades (View Transitions). All off under "reduce motion".
+- Ctrl+K (or `/`) opens the command menu: pages plus search of invoices, items,
+  vendors and (for Admin/HoD) people, filtered by what the user may see.
+- Logo: `static/img/bits-logo-160.png` and `-480.png`. To use an SVG, drop it in
+  `static/img/` and update the two `<img>` paths in `base.html` / `login.html`.
 
 ## Data model
 

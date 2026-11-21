@@ -3,47 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ PORTAL_NAME }}{% endblock %} · {{ PORTAL_NAME }}</title>
-  <link rel="preload" href="{% static 'vendor/inter/inter-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <meta name="view-transition" content="same-origin">
+  <title>{% block title %}{{ PORTAL_NAME }}{% endblock %} · {{ DEPARTMENT_SHORT }} · BITS Pilani</title>
+  <link rel="icon" href="{% static 'img/bits-logo-160.png' %}" type="image/png">
+  <link rel="preload" href="{% static 'vendor/geist/geist-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/app.js' %}"></script>
   {% block head %}{% endblock %}
   <script defer src="{% static 'vendor/alpinejs/alpine-3.17.5.min.js' %}"></script>
 </head>
 <body>
+<div class="nav-progress" aria-hidden="true"></div>
 {% if user.is_authenticated and not user.must_change_password %}
-<div class="app" x-data="{ nav: false }">
+<div class="app" x-data="shell" :class="collapsed && 'collapsed'">
   <aside class="sidebar" :class="nav && 'open'">
-    <a class="brand" href="{% url 'core:home' %}">
-      <span class="brand-mark">CS</span>
-      <span><span class="brand-name">{{ PORTAL_NAME }}</span><br><span class="brand-sub">{{ DEPARTMENT_NAME }}</span></span>
+    <div class="tri-stripe" aria-hidden="true"></div>
+    <a class="brand" href="{% url 'core:home' %}" title="{{ PORTAL_NAME }}">
+      <img class="brand-logo" src="{% static 'img/bits-logo-160.png' %}" alt="BITS Pilani logo" width="64" height="64">
+      <span class="brand-text">
+        <span class="brand-name">BITS Pilani</span>
+        <span class="brand-sub">{{ DEPARTMENT_NAME }}<br>{{ PORTAL_NAME }}</span>
+      </span>
     </a>
 
-    <a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a>
+    <a class="btn btn-primary btn-new" href="{% url 'purchases:create' %}" title="New purchase">{% include "partials/icon.html" with name="plus" %}<span class="btn-label">New purchase</span></a>
+    <button type="button" class="cmdk-trigger" @click="$dispatch('open-cmdk')" title="Search (Ctrl+K)">
+      {% include "partials/icon.html" with name="search" %}<span class="nav-label">Search…</span><span class="kbd-hint"><kbd>Ctrl</kbd> <kbd>K</kbd></span>
+    </button>
 
     {% with path=request.path %}
-    <a class="nav-link {% if path == '/' %}active{% endif %}" href="{% url 'core:home' %}">{% include "partials/icon.html" with name="home" %} Dashboard</a>
-    <a class="nav-link {% if path|slice:':11' == '/purchases/' and path != '/purchases/new/' and path|slice:':16' != '/purchases/bulk/' %}active{% endif %}" href="{% url 'purchases:list' %}">
-      {% include "partials/icon.html" with name="list" %} {% if user.can_view_all_records %}All purchases{% else %}My purchases{% endif %}
-    </a>
-    <a class="nav-link {% if path|slice:':11' == '/analytics/' %}active{% endif %}" href="{% url 'analytics:overview' %}">
-      {% include "partials/icon.html" with name="chart" %} Analytics</a>
-    <a class="nav-link {% if path == '/purchases/bulk/' %}active{% endif %}" href="{% url 'purchases:bulk_upload' %}">
-      {% include "partials/icon.html" with name="file" %} Bulk upload</a>
-    {% if user.can_manage_faculty %}
-      <div class="nav-section">Manage</div>
-      <a class="nav-link {% if path|slice:':15' == '/manage/people/' %}active{% endif %}" href="{% url 'administration:people' %}">{% include "partials/icon.html" with name="users" %} People</a>
-      <a class="nav-link {% if path|slice:':14' == '/manage/lists/' or path|slice:':14' == '/manage/types/' %}active{% endif %}" href="{% url 'administration:lookups_home' %}">{% include "partials/icon.html" with name="settings" %} Lists &amp; fields</a>
-    {% endif %}
-    {% if user.is_staff %}
-      <a class="nav-link" href="{% url 'admin:index' %}">{% include "partials/icon.html" with name="box" %} Technical admin</a>
-    {% endif %}
+    <nav class="nav" aria-label="Main">
+      <span class="nav-indicator" aria-hidden="true"></span>
+      <a class="nav-link {% if path == '/' %}active{% endif %}" href="{% url 'core:home' %}" title="Dashboard">{% include "partials/icon.html" with name="home" %}<span class="nav-label">Dashboard</span></a>
+      <a class="nav-link {% if path|slice:':11' == '/purchases/' and path != '/purchases/new/' and path|slice:':16' != '/purchases/bulk/' %}active{% endif %}" href="{% url 'purchases:list' %}" title="Purchases">
+        {% include "partials/icon.html" with name="list" %}<span class="nav-label">{% if user.can_view_all_records %}All purchases{% else %}My purchases{% endif %}</span></a>
+      <a class="nav-link {% if path|slice:':11' == '/analytics/' %}active{% endif %}" href="{% url 'analytics:overview' %}" title="Analytics">
+        {% include "partials/icon.html" with name="chart" %}<span class="nav-label">Analytics</span></a>
+      <a class="nav-link {% if path|slice:':16' == '/purchases/bulk/' %}active{% endif %}" href="{% url 'purchases:bulk_upload' %}" title="Bulk upload">
+        {% include "partials/icon.html" with name="file" %}<span class="nav-label">Bulk upload</span></a>
+      {% if user.can_manage_faculty %}
+        <div class="nav-section">Manage</div>
+        <a class="nav-link {% if path|slice:':15' == '/manage/people/' %}active{% endif %}" href="{% url 'administration:people' %}" title="People">
+          {% include "partials/icon.html" with name="users" %}<span class="nav-label">People</span></a>
+        <a class="nav-link {% if path|slice:':14' == '/manage/lists/' or path|slice:':14' == '/manage/types/' %}active{% endif %}" href="{% url 'administration:lookups_home' %}" title="Lists & fields">
+          {% include "partials/icon.html" with name="settings" %}<span class="nav-label">Lists &amp; fields</span></a>
+      {% endif %}
+      {% if user.is_staff %}
+        <a class="nav-link" href="{% url 'admin:index' %}" title="Technical admin">{% include "partials/icon.html" with name="box" %}<span class="nav-label">Technical admin</span></a>
+      {% endif %}
+    </nav>
     {% endwith %}
 
     <div class="sidebar-foot">
       <div class="user-chip">
         <span class="avatar">{{ user.full_name|slice:":1"|upper }}</span>
-        <span><span class="name">{{ user.full_name }}</span><br><span class="role">{{ user.get_role_display }} · {{ user.username }}</span></span>
+        <span class="user-meta"><span class="name">{{ user.full_name }}</span><span class="role">{{ user.get_role_display }} · {{ user.username }}</span></span>
+        <button type="button" class="btn btn-ghost btn-sm btn-icon collapse-btn" @click="collapsed = !collapsed" :title="collapsed ? 'Expand menu' : 'Collapse menu'">{% include "partials/icon.html" with name="sidebar" %}</button>
       </div>
       <div class="foot-links">
         <a href="{% url 'accounts:password_change' %}">Password</a>
@@ -55,12 +70,63 @@
 
   <div class="main">
     <div class="mobile-bar">
-      <button class="btn btn-ghost btn-sm" @click="nav = true" aria-label="Open menu">{% include "partials/icon.html" with name="menu" %}</button>
-      <strong>{{ PORTAL_NAME }}</strong>
+      <button class="btn btn-ghost btn-sm btn-icon" @click="nav = true" aria-label="Open menu">{% include "partials/icon.html" with name="menu" %}</button>
+      <img src="{% static 'img/bits-logo-160.png' %}" alt="" width="30" height="30">
+      <strong>{{ DEPARTMENT_SHORT }} · {{ PORTAL_NAME }}</strong>
+      <button class="btn btn-ghost btn-sm btn-icon" style="margin-left:auto" @click="$dispatch('open-cmdk')" aria-label="Search">{% include "partials/icon.html" with name="search" %}</button>
     </div>
     <main class="content">
       {% block content %}{% endblock %}
     </main>
+  </div>
+</div>
+
+{# ---- Command menu (Ctrl+K) ---- #}
+{{ CMDK_PAGES|json_script:"cmdk-pages" }}
+<div x-data="cmdk" data-url="{% url 'core:search' %}" @keydown.escape.window="open = false">
+  <template x-if="open">
+    <div class="cmdk-backdrop" @click.self="open = false"
+         x-transition:enter="t-enter" x-transition:enter-start="t-pop-from" x-transition:enter-end="t-to">
+      <div class="cmdk" role="dialog" aria-label="Search">
+        <div class="cmdk-input">
+          {% include "partials/icon.html" with name="search" %}
+          <input x-ref="input" x-model="q" @input="search()" @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+                 @keydown.enter.prevent="go(results[active])" placeholder="Search invoices, items, vendors{% if user.can_manage_faculty %}, people{% endif %} or pages…" autocomplete="off">
+          <kbd>Esc</kbd>
+        </div>
+        <div class="cmdk-list" x-ref="list">
+          <template x-for="(r, i) in results" :key="r.url + i">
+            <div>
+              <div class="cmdk-group" x-show="groupStart(i)" x-text="r.group"></div>
+              <a class="cmdk-item" :class="i === active && 'active'" :href="r.url" @mouseenter="active = i" @click.prevent="go(r)">
+                <span x-html="$refs['icon-' + (r.icon || 'arrow-right')]?.innerHTML"></span>
+                <span x-text="r.label"></span>
+                <span class="sub" x-text="r.sub || ''"></span>
+                <span class="cmdk-go">↵</span>
+              </a>
+            </div>
+          </template>
+          <div class="cmdk-empty" x-show="!results.length && !loading">No matches for “<span x-text="q"></span>”.</div>
+          <div class="cmdk-empty" x-show="!results.length && loading">Searching…</div>
+        </div>
+        <div class="cmdk-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>Esc</kbd> close</span>
+          <span style="margin-left:auto"><span class="tri-dots"><i></i><i></i><i></i></span></span></div>
+      </div>
+    </div>
+  </template>
+  {# Icon sources for results (cloned by name) #}
+  <div hidden>
+    <template x-ref="icon-home">{% include "partials/icon.html" with name="home" %}</template>
+    <template x-ref="icon-plus">{% include "partials/icon.html" with name="plus" %}</template>
+    <template x-ref="icon-list">{% include "partials/icon.html" with name="list" %}</template>
+    <template x-ref="icon-chart">{% include "partials/icon.html" with name="chart" %}</template>
+    <template x-ref="icon-file">{% include "partials/icon.html" with name="file" %}</template>
+    <template x-ref="icon-key">{% include "partials/icon.html" with name="key" %}</template>
+    <template x-ref="icon-users">{% include "partials/icon.html" with name="users" %}</template>
+    <template x-ref="icon-settings">{% include "partials/icon.html" with name="settings" %}</template>
+    <template x-ref="icon-receipt">{% include "partials/icon.html" with name="receipt" %}</template>
+    <template x-ref="icon-box">{% include "partials/icon.html" with name="box" %}</template>
+    <template x-ref="icon-arrow-right">{% include "partials/icon.html" with name="arrow-right" %}</template>
   </div>
 </div>
 {% else %}
@@ -71,9 +137,10 @@
 <div class="toasts">
   {% for message in messages %}
   <div class="toast {{ message.tags }}" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)"
-       x-transition:enter="t-enter" x-transition:enter-start="t-from" x-transition:enter-end="t-to"
-       x-transition:leave="t-leave" x-transition:leave-start="t-to" x-transition:leave-end="t-from" role="status">
-    <span class="dot"></span><span>{{ message }}</span>
+       x-transition:enter="t-enter" x-transition:enter-start="t-toast-from" x-transition:enter-end="t-to"
+       x-transition:leave="t-leave" x-transition:leave-start="t-to" x-transition:leave-end="t-toast-from" role="status">
+    <span class="dot">{% if message.tags == "success" %}{% include "partials/icon.html" with name="check" %}{% elif message.tags == "error" %}{% include "partials/icon.html" with name="x" %}{% endif %}</span>
+    <span>{{ message }}</span>
     <button type="button" @click="show = false" aria-label="Dismiss">×</button>
   </div>
   {% endfor %}

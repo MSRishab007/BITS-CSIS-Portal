@@ -209,4 +209,6 @@ if SECURE_COOKIES:
 # Portal
 # --------------------------------------------------------------------------
 PORTAL_NAME = "Asset & Purchase Portal"
-DEPARTMENT_NAME = env("DEPARTMENT_NAME", default="Department")
+DEPARTMENT_NAME = env("DEPARTMENT_NAME", default="Department of Computer Science & Information Systems")
+DEPARTMENT_SHORT = env("DEPARTMENT_SHORT", default="CSIS")
+INSTITUTE_NAME = "BITS Pilani"

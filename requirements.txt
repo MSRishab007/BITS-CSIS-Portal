@@ -1,0 +1,5 @@
+# Django 5.2 is the LTS release (supported until April 2028). Needs Python 3.10+.
+Django>=5.2,<5.3
+django-environ>=0.12,<1.0
+argon2-cffi>=23.1
+gunicorn>=23.0

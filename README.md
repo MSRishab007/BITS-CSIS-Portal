@@ -205,14 +205,19 @@ Invoice pages show "Recorded … by …" and "Last changed … by …".
 - **Bills are private.** `media/` is never served publicly; files will be
   streamed through a view that checks the viewer's permission.
 
-## Deployment checklist (college server)
+## Deployment
+
+**See [DEPLOYMENT.md](DEPLOYMENT.md)** for the full step-by-step guide (Ubuntu + Nginx +
+Gunicorn, HTTPS, nightly backups, updates). Short version:
+`sudo bash deploy/scripts/setup.sh <host>` once, `sudo bash deploy/scripts/update.sh` for each new version.
+
+### Deployment checklist (college server)
 
 - `DEBUG=False`, a fresh `SECRET_KEY`, real `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`
 - `SECURE_COOKIES=True` once served over HTTPS
 - `python manage.py collectstatic` and `python manage.py check --deploy`
   (the HSTS and SSL-redirect warnings are expected: Nginx handles the
   redirect, and HSTS is enabled only after HTTPS is confirmed working)
-- Back up `db.sqlite3` with `sqlite3 db.sqlite3 ".backup backup.sqlite3"`
-  (not a plain file copy) together with the `media/` folder
-
-Full Nginx/Gunicorn/systemd configuration will be added in a later commit.
+- Backups: `python manage.py portal_backup` (consistent database copy + all bills in one
+  archive); restore with `python manage.py portal_restore <archive>`. Never copy the
+  database file while the site is running.

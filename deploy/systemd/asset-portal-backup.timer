@@ -1,0 +1,12 @@
+# /etc/systemd/system/asset-portal-backup.timer
+# Nightly backup at 02:30 (catches up after the server was off).
+[Unit]
+Description=Nightly backup of the Asset & Purchase Portal
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

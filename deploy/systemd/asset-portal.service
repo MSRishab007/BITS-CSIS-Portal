@@ -1,0 +1,29 @@
+# /etc/systemd/system/asset-portal.service
+# The portal itself (Gunicorn). Starts at boot, restarts if it crashes.
+[Unit]
+Description=BITS CSIS Asset & Purchase Portal (Gunicorn)
+After=network.target
+
+[Service]
+Type=notify
+User=portal
+Group=portal
+WorkingDirectory=/srv/asset-portal/app
+EnvironmentFile=/srv/asset-portal/app/.env
+ExecStart=/srv/asset-portal/venv/bin/gunicorn config.wsgi:application -c deploy/gunicorn.conf.py
+ExecReload=/bin/kill -s HUP $MAINPID
+RuntimeDirectory=asset-portal
+RuntimeDirectoryMode=0755
+UMask=0027
+Restart=on-failure
+RestartSec=3
+
+# Hardening: the app can only write to its data, logs and backups.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/asset-portal/data /srv/asset-portal/logs /srv/asset-portal/backups
+
+[Install]
+WantedBy=multi-user.target

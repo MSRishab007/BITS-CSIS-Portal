@@ -220,6 +220,10 @@ def purchase_delete(request, pk):
     return render(request, "purchases/confirm_delete.html", {"purchase": purchase})
 
 
+BILL_CONTENT_TYPES = {".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                      ".png": "image/png", ".webp": "image/webp"}
+
+
 @login_required
 @require_GET
 def bill_file(request, pk):
@@ -229,12 +233,24 @@ def bill_file(request, pk):
         raise Http404
     ext = os.path.splitext(purchase.bill_file.name)[1].lower()
     safe_invoice = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in purchase.invoice_number)
+    filename = f"bill-{safe_invoice}{ext}"
+    disposition = "attachment" if request.GET.get("download") == "1" else "inline"
+
+    if settings.SERVE_BILLS_WITH_NGINX:
+        # Permission is checked above; Nginx sends the bytes from an
+        # `internal` location that can't be requested directly.
+        response = HttpResponse(content_type=BILL_CONTENT_TYPES.get(ext, "application/octet-stream"))
+        response["X-Accel-Redirect"] = settings.NGINX_PROTECTED_PREFIX + purchase.bill_file.name
+        response["Content-Disposition"] = f'{disposition}; filename="{filename}"'
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "private, no-store"
+        return response
+
     try:
         f = purchase.bill_file.open("rb")
     except FileNotFoundError:
         raise Http404
-    response = FileResponse(f, filename=f"bill-{safe_invoice}{ext}",
-                            as_attachment=request.GET.get("download") == "1")
+    response = FileResponse(f, filename=filename, as_attachment=disposition == "attachment")
     response["X-Content-Type-Options"] = "nosniff"
     response["Cache-Control"] = "private, no-store"
     return response

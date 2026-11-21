@@ -1,0 +1,15 @@
+# /etc/systemd/system/asset-portal-backup.service
+# One backup run (started by the timer below, or by hand:
+#   sudo systemctl start asset-portal-backup)
+[Unit]
+Description=Back up the Asset & Purchase Portal (database + bills)
+
+[Service]
+Type=oneshot
+User=portal
+Group=portal
+WorkingDirectory=/srv/asset-portal/app
+EnvironmentFile=/srv/asset-portal/app/.env
+ExecStart=/srv/asset-portal/venv/bin/python manage.py portal_backup
+Nice=10
+IOSchedulingClass=idle

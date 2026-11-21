@@ -17,6 +17,11 @@ env = environ.Env(
     CSRF_TRUSTED_ORIGINS=(list, []),
     SECURE_COOKIES=(bool, False),
     ALLOWED_EMAIL_DOMAINS=(list, []),
+    BEHIND_PROXY=(bool, False),
+    SERVE_BILLS_WITH_NGINX=(bool, False),
+    STATIC_MANIFEST=(bool, False),
+    SECURE_HSTS_SECONDS=(int, 0),
+    BACKUP_KEEP_DAYS=(int, 14),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -181,10 +186,25 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Bills are private: MEDIA_ROOT is never served directly. Files will be
-# streamed through a permission-checked view.
+# Production: file names get a content hash (app.3f2a1c.css) so browsers can
+# cache them for a year and still pick up every change. Needs collectstatic.
+if env("STATIC_MANIFEST"):
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+    }
+
+# Bills are private: MEDIA_ROOT is never served directly. Files are sent
+# through a permission-checked view. In production that view only checks
+# permission and tells Nginx (X-Accel-Redirect) to send the file, which is
+# faster than streaming it through Python.
 MEDIA_ROOT = _path(env("MEDIA_ROOT", default="media"))
 MEDIA_URL = "/media/"
+SERVE_BILLS_WITH_NGINX = env("SERVE_BILLS_WITH_NGINX")
+NGINX_PROTECTED_PREFIX = "/protected-media/"  # must match the `internal` location in nginx
+
+BACKUP_DIR = _path(env("BACKUP_DIR", default="backups"))
+BACKUP_KEEP_DAYS = env("BACKUP_KEEP_DAYS")
 
 # Reject request bodies larger than this (bulk uploads included).
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
@@ -201,9 +221,45 @@ SESSION_COOKIE_AGE = 60 * 60 * 8  # one working day
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
-if SECURE_COOKIES:
-    # Nginx terminates HTTPS and passes this header on.
+if env("BEHIND_PROXY") or SECURE_COOKIES:
+    # Nginx terminates HTTPS and tells Django the original scheme.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Real client IP for login-attempt logs (one proxy: Nginx).
+    AXES_IPWARE_PROXY_COUNT = 1
+    AXES_IPWARE_META_PRECEDENCE_ORDER = ["HTTP_X_FORWARDED_FOR", "REMOTE_ADDR"]
+# Turn on only after HTTPS is confirmed working (browsers remember it).
+SECURE_HSTS_SECONDS = env("SECURE_HSTS_SECONDS")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+
+# --------------------------------------------------------------------------
+# Logging: console (captured by systemd's journal) + a rotating file.
+# --------------------------------------------------------------------------
+LOG_DIR = _path(env("LOG_DIR", default="logs"))
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "plain"},
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "axes": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+    },
+}
+if not DEBUG and env.bool("LOG_TO_FILE", default=True):
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    LOGGING["handlers"]["file"] = {
+        "class": "logging.handlers.RotatingFileHandler", "formatter": "plain",
+        "filename": str(LOG_DIR / "portal.log"), "maxBytes": 5 * 1024 * 1024, "backupCount": 5,
+    }
+    for name in ("root",):
+        LOGGING[name]["handlers"].append("file")
+    for name in ("django.request", "axes"):
+        LOGGING["loggers"][name]["handlers"].append("file")
 
 # --------------------------------------------------------------------------
 # Portal

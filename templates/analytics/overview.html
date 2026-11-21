@@ -12,7 +12,7 @@
     <nav class="segmented" aria-label="Period"><span class="thumb"></span>
       {% for v, l, qs in period_links %}<a href="?{{ qs }}" class="{% if f.period == v %}on{% endif %}">{% if v == "this_fy" %}This FY{% elif v == "last_fy" %}Last FY{% elif v == "last_12m" %}12 months{% else %}All time{% endif %}</a>{% endfor %}
     </nav>
-    <a class="btn" href="{% url 'purchases:export' %}?{{ querystring }}">{% include "partials/icon.html" with name="download" %} Export</a>
+    <a class="btn" hx-boost="false" href="{% url 'purchases:export' %}?{{ querystring }}">{% include "partials/icon.html" with name="download" %} Export</a>
   </div>
 </div>
 

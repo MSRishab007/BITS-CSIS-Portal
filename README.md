@@ -130,9 +130,13 @@ form behaviour in `static/js/purchase-form.js`.
 - Neutral base (Vercel-like), Geist font (Geist Mono for invoice/serial numbers).
 - Primary colour: BITS sky blue (`--accent`, deepened to `#0B7CAD` for contrast;
   the logo blue `#5AC6E4` in dark mode). Change it in one place in `app.css`.
-- BITS tri-colour (blue · red · yellow) as a signature: sidebar stripe, page-change
+- BITS tri-colour in the official order — yellow · light blue · red ("innovate · achieve · lead") — as a signature: sidebar stripe, page-change
   progress bar, eyebrow marks, toast timers, avatar ring. **Red never appears alone**
   except for errors, which use their own darker red.
+- Navigation: htmx "boosts" links and forms inside the app, so only `#content` (and the
+  nav links) are swapped. The sidebar never reloads, its highlight slides to the new page,
+  and View Transitions animate the page area. Downloads (`hx-boost="false"`), sign-out,
+  technical admin and non-app responses do normal page loads.
 - Motion: staggered entrances, Apple-Pay style tilt on KPI cards (`.tilt`),
   count-up numbers (`data-count`), sliding nav/segmented indicators, donut
   draw-in, page cross-fades (View Transitions). All off under "reduce motion".

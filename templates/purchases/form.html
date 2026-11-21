@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{% if mode == "create" %}New purchase{% elif mode == "edit" %}Edit {{ purchase.invoice_number }}{% else %}Add items{% endif %}{% endblock %}
-{% block head %}<script src="{% static 'js/purchase-form.js' %}"></script>{% endblock %}
 
 {% block content %}
 <div class="page-head">

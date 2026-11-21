@@ -14,9 +14,9 @@
 <section class="card">
   <form method="get" class="filters" style="grid-template-columns: 2fr 1fr 1fr auto">
     <div class="field"><label for="q">Search</label><input type="search" id="q" name="q" value="{{ q }}" placeholder="Name, email, username, PSRN"></div>
-    <div class="field"><label for="f-role">Role</label><select id="f-role" name="role" onchange="this.form.submit()"><option value="">All roles</option>
+    <div class="field"><label for="f-role">Role</label><select id="f-role" name="role" onchange="this.form.requestSubmit()"><option value="">All roles</option>
       {% for v, l in roles %}<option value="{{ v }}" {% if role == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
-    <div class="field"><label for="f-status">Status</label><select id="f-status" name="status" onchange="this.form.submit()">
+    <div class="field"><label for="f-status">Status</label><select id="f-status" name="status" onchange="this.form.requestSubmit()">
       <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
       <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Deactivated</option>
       <option value="all" {% if status == 'all' %}selected{% endif %}>Everyone</option></select></div>

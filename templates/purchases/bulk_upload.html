@@ -34,8 +34,8 @@
     <div class="card-head"><div><span class="badge badge-accent">Step 1</span><h2 style="margin-top:8px">Download the template</h2>
       <p>Includes dropdowns for categories, types, funding sources, venues and vendors, plus an example sheet.</p></div></div>
     <div class="actions">
-      <a class="btn btn-primary" href="{% url 'purchases:bulk_template' 'xlsx' %}" @click="step = Math.max(step, 2)">{% include "partials/icon.html" with name="file" %} Excel template (.xlsx)</a>
-      <a class="btn" href="{% url 'purchases:bulk_template' 'csv' %}" @click="step = Math.max(step, 2)">CSV template</a>
+      <a class="btn btn-primary" hx-boost="false" href="{% url 'purchases:bulk_template' 'xlsx' %}" @click="step = Math.max(step, 2)">{% include "partials/icon.html" with name="file" %} Excel template (.xlsx)</a>
+      <a class="btn" hx-boost="false" href="{% url 'purchases:bulk_template' 'csv' %}" @click="step = Math.max(step, 2)">CSV template</a>
     </div>
     <ul class="small muted" style="margin:16px 0 0;padding-left:18px">
       <li>One row per item. Repeat the invoice details on each row of the same invoice.</li>

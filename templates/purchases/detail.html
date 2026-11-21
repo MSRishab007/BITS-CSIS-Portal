@@ -14,7 +14,7 @@
       <a class="btn" href="{% url 'purchases:add_items' purchase.pk %}">{% include "partials/icon.html" with name="plus" %} Add items</a>
       <a class="btn btn-primary" href="{% url 'purchases:edit' purchase.pk %}">{% include "partials/icon.html" with name="edit" %} Edit</a>
       {% include "partials/menu_open.html" %}
-        <a class="menu-item" href="{% url 'purchases:export' %}?period=all&amp;q={{ purchase.invoice_number|urlencode }}">{% include "partials/icon.html" with name="download" %} Export to Excel</a>
+        <a class="menu-item" hx-boost="false" href="{% url 'purchases:export' %}?period=all&amp;q={{ purchase.invoice_number|urlencode }}">{% include "partials/icon.html" with name="download" %} Export to Excel</a>
         <div class="menu-sep"></div>
         <a class="menu-item danger" href="{% url 'purchases:delete' purchase.pk %}">{% include "partials/icon.html" with name="trash" %} Delete invoice</a>
       {% include "partials/menu_close.html" %}

@@ -5,6 +5,7 @@
 <div class="card auth-card">
   <img class="auth-logo" src="{% static 'img/bits-logo-480.png' %}" alt="BITS Pilani logo" width="104" height="104">
   <div class="auth-org">BITS Pilani · {{ DEPARTMENT_NAME }}</div>
+  <div class="tagline" aria-label="innovate, achieve, lead"><span>innovate</span><i>·</i><span>achieve</span><i>·</i><span>lead</span></div>
   <h1>{{ PORTAL_NAME }}</h1>
   <p class="muted">Sign in with your BITS email or username.</p>
   {% for message in messages %}<div class="alert alert-info" style="margin-top:16px">{{ message }}</div>{% endfor %}

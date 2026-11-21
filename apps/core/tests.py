@@ -54,6 +54,30 @@ class SearchAndShellTests(TestCase):
         self.assertContains(r, 'id="cmdk-pages"')
         self.assertNotContains(r, "/manage/people/")  # faculty don't get management pages
 
+    def test_smooth_navigation_shell(self):
+        self.client.force_login(self.hod)
+        r = self.client.get(reverse("core:home"))
+        self.assertContains(r, 'hx-boost="true" hx-target="#content" hx-select="#content"')
+        self.assertContains(r, 'id="content"')
+        self.assertContains(r, 'id="nav-links"')
+        self.assertContains(r, "htmx-2.0.11.min.js")
+        # sign-out and technical admin are normal page loads
+        self.assertContains(r, 'class="inline" hx-boost="false"')
+
+    def test_downloads_are_not_swapped_into_the_page(self):
+        self.client.force_login(self.hod)
+        for url in (reverse("purchases:list"), reverse("analytics:overview"), reverse("purchases:bulk_upload")):
+            self.assertContains(self.client.get(url), 'hx-boost="false"', msg_prefix=url)
+
+    def test_bits_colour_order_and_tagline(self):
+        from pathlib import Path
+        from django.conf import settings
+        css = (Path(settings.BASE_DIR) / "static" / "css" / "app.css").read_text()
+        self.assertIn("--tri: linear-gradient(90deg, var(--bits-yellow) 0 33.33%, var(--bits-blue) 33.33% 66.66%, "
+                      "var(--bits-red) 66.66% 100%)", css)
+        r = self.client.get(reverse("accounts:login"))
+        self.assertContains(r, "<span>innovate</span><i>·</i><span>achieve</span><i>·</i><span>lead</span>", html=False)
+
     def test_login_page_has_logo(self):
         r = self.client.get(reverse("accounts:login"))
         self.assertContains(r, "bits-logo-480.png")

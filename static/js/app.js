@@ -10,6 +10,18 @@
  */
 (function () {
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Two harmless rejections happen when a page swap interrupts an animation:
+  //  - Alpine: a closing x-transition was cut short ({isFromCancelledTransition})
+  //  - browser: a page transition was skipped because a new load started
+  // Swallow just these so real errors stand out in the console.
+  window.addEventListener("unhandledrejection", (e) => {
+    const r = e.reason;
+    const benign = (r && r.isFromCancelledTransition) ||
+      (typeof DOMException !== "undefined" && r instanceof DOMException &&
+       ["AbortError", "InvalidStateError"].includes(r.name));
+    if (benign) e.preventDefault();
+  });
   const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
   // ---------------------------------------------------------------- progress
@@ -26,13 +38,18 @@
     const href = a.getAttribute("href");
     if (!href || href.startsWith("#") || a.target === "_blank" || a.hasAttribute("download")) return;
     if (href.includes("export.xlsx") || href.includes("template.") || href.includes("/bill/")) return;
+    if (a.closest("[hx-boost='true']") && !a.closest("[hx-boost='false']")) return;  // htmx shows its own progress
     if (a.origin === location.origin) startProgress();
   });
-  document.addEventListener("submit", (e) => { if (!e.defaultPrevented) startProgress(); });
-  window.addEventListener("pageshow", () => {
+  document.addEventListener("submit", (e) => {
+    if (e.target.closest("[hx-boost='true']") && !e.target.closest("[hx-boost='false']")) return;
+    if (!e.defaultPrevented) startProgress();
+  });
+  function finishProgress() {
     const bar = document.querySelector(".nav-progress");
     if (bar) { bar.classList.remove("run"); bar.classList.add("done"); }
-  });
+  }
+  window.addEventListener("pageshow", finishProgress);
 
   // ---------------------------------------------------------------- tilt
   function bindTilt(el) {
@@ -98,20 +115,54 @@
       el.addEventListener("click", () => { seg.querySelectorAll(".on").forEach((o) => o.classList.remove("on")); el.classList.add("on"); place(el); });
     });
   }
-  function bindNav(nav) {
+  function placeNav(nav, link, animate = true) {
     const ind = nav.querySelector(".nav-indicator");
     if (!ind) return;
-    const active = nav.querySelector(".nav-link.active");
-    placeThumb(nav, ind, active, true);
-    nav.querySelectorAll(".nav-link").forEach((link) => {
-      link.addEventListener("click", () => placeThumb(nav, ind, link, true));
+    if (!animate) ind.style.transition = "none";
+    placeThumb(nav, ind, link || nav.querySelector(".nav-link.active"), true);
+    if (!animate) { void ind.offsetWidth; ind.style.transition = ""; }
+  }
+  function bindNav(nav) {
+    if (nav.dataset.bound) { placeNav(nav); return; }
+    nav.dataset.bound = "1";
+    placeNav(nav, null, false);
+    // Slide immediately on click (instant feedback); corrected after the swap.
+    nav.addEventListener("click", (e) => {
+      const link = e.target.closest(".nav-link");
+      if (link && !e.metaKey && !e.ctrlKey) placeNav(nav, link);
     });
+  }
+
+  // Underline that slides between tabs (Lists & fields).
+  function bindTabs(tabs) {
+    let ink = tabs.querySelector(".tab-ink");
+    if (!ink) { ink = document.createElement("span"); ink.className = "tab-ink"; tabs.appendChild(ink); }
+    const active = tabs.querySelector(".tab.active");
+    const prev = sessionStorage.getItem("tab-ink");
+    const place = (el, animate) => {
+      if (!el) return;
+      if (!animate) ink.style.transition = "none";
+      ink.style.transform = `translateX(${el.offsetLeft}px)`;
+      ink.style.width = `${el.offsetWidth}px`;
+      if (!animate) { void ink.offsetWidth; ink.style.transition = ""; }
+    };
+    if (prev && active && !reduceMotion) {        // start where the last tab was, then slide
+      const [x, w] = prev.split(",");
+      ink.style.transition = "none"; ink.style.transform = `translateX(${x}px)`; ink.style.width = `${w}px`;
+      void ink.offsetWidth; ink.style.transition = "";
+      requestAnimationFrame(() => place(active, true));
+    } else place(active, false);
+    tabs.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+      sessionStorage.setItem("tab-ink", `${t.offsetLeft},${t.offsetWidth}`);
+      place(t, true);
+    }));
   }
 
   function init(root = document) {
     root.querySelectorAll(".tilt").forEach(bindTilt);
     root.querySelectorAll(".segmented").forEach(bindSegmented);
-    root.querySelectorAll(".nav").forEach(bindNav);
+    document.querySelectorAll(".nav").forEach(bindNav);
+    root.querySelectorAll(".tabs").forEach(bindTabs);
     const counters = root.querySelectorAll("[data-count]");
     if ("IntersectionObserver" in window) {
       const io = new IntersectionObserver((entries) => entries.forEach((en) => {
@@ -121,7 +172,59 @@
     } else counters.forEach(countUp);
   }
   document.addEventListener("DOMContentLoaded", () => init());
-  window.addEventListener("resize", () => document.querySelectorAll(".nav").forEach(bindNav));
+  window.addEventListener("resize", () => document.querySelectorAll(".nav").forEach((n) => placeNav(n, null, false)));
+
+  // ---------------------------------------------------------------- htmx (smooth navigation)
+  // Only #content (and the nav links) are swapped; the sidebar stays put.
+  document.addEventListener("htmx:beforeRequest", (e) => {
+    if (e.detail.boosted) startProgress();
+    const form = e.detail.elt.tagName === "FORM" ? e.detail.elt : null;
+    const btn = form && (lastSubmitter || form.querySelector("button[type=submit]:not([formnovalidate])"));
+    if (btn && form.contains(btn)) btn.classList.add("is-loading");
+  });
+  let lastSubmitter = null;
+  document.addEventListener("submit", (e) => { lastSubmitter = e.submitter || null; }, true);
+
+  document.addEventListener("htmx:beforeSwap", (e) => {
+    const xhr = e.detail.xhr;
+    if (!e.detail.boosted || !xhr) return;
+    // Not an app page (sign-in, technical admin, a server error page…): load it normally.
+    if (!/id="content"/.test(xhr.responseText || "")) {
+      e.preventDefault();
+      window.location.href = xhr.responseURL || e.detail.pathInfo.requestPath;
+    }
+  });
+  document.addEventListener("htmx:afterSettle", (e) => {
+    finishProgress();
+    lastSubmitter = null;
+    if (e.detail.target && e.detail.target.id === "content") {
+      init(document.getElementById("content") || document);
+      window.dispatchEvent(new CustomEvent("navigated"));
+    }
+  });
+  ["htmx:sendError", "htmx:timeout"].forEach((ev) => document.addEventListener(ev, (e) => {
+    // Network trouble: fall back to a normal page load.
+    finishProgress();
+    if (e.detail.requestConfig && e.detail.requestConfig.verb === "get") window.location.href = e.detail.pathInfo.requestPath;
+  }));
+
+  // Navigate with the same smooth swap from code (e.g. the command menu).
+  // One permanent hidden link inside the boosted shell: htmx reads its
+  // inherited settings (target/select) when the response arrives, so it must
+  // still be in the page then — never create-and-remove it.
+  window.portalNavigate = function (url) {
+    const app = document.querySelector(".app[hx-boost]");
+    if (!window.htmx || !app) { window.location = url; return; }
+    let a = document.getElementById("portal-nav-link");
+    if (!a) {
+      a = document.createElement("a");
+      a.id = "portal-nav-link"; a.hidden = true; a.setAttribute("aria-hidden", "true");
+      app.appendChild(a);
+    }
+    a.setAttribute("href", url);
+    htmx.process(a);
+    a.click();
+  };
 
   // ---------------------------------------------------------------- Alpine components
   document.addEventListener("alpine:init", () => {
@@ -130,10 +233,11 @@
       nav: false,
       collapsed: false,
       init() {
+        window.addEventListener("navigated", () => { this.nav = false; });
         try { this.collapsed = localStorage.getItem("sidebar-collapsed") === "1"; } catch (e) { /* storage off */ }
         this.$watch("collapsed", (v) => {
           try { localStorage.setItem("sidebar-collapsed", v ? "1" : "0"); } catch (e) { /* storage off */ }
-          setTimeout(() => document.querySelectorAll(".nav").forEach(bindNav), 260);
+          setTimeout(() => document.querySelectorAll(".nav").forEach((n) => placeNav(n, null, false)), 260);
         });
       },
     }));
@@ -156,7 +260,8 @@
       toggle(force) {
         this.open = force ?? !this.open;
         if (this.open) { this.q = ""; this.results = this.pageMatches(""); this.active = 0;
-          this.$nextTick(() => this.$refs.input.focus()); }
+          // The input lives inside x-if, so wait until it exists.
+          requestAnimationFrame(() => document.querySelector(".cmdk-input input")?.focus()); }
       },
       pageMatches(q) {
         q = q.toLowerCase();
@@ -189,8 +294,7 @@
       go(item) {
         if (!item) return;
         this.open = false;
-        startProgress();
-        window.location = item.url;
+        window.portalNavigate(item.url);
       },
       groupStart(i) { return i === 0 || this.results[i - 1].group !== this.results[i].group; },
     }));
@@ -219,6 +323,10 @@
           this.html = res.ok ? await res.text() : "<p class='muted'>Couldn't load this invoice.</p>";
         } catch (e) { this.html = "<p class='muted'>Couldn't load this invoice.</p>"; }
         this.loading = false;
+        this.$nextTick(() => {
+          document.querySelectorAll(".drawer a[href]:not([target])").forEach((a) =>
+            a.addEventListener("click", (ev) => { ev.preventDefault(); this.close(); window.portalNavigate(a.getAttribute("href")); }, { once: true }));
+        });
       },
       close() { this.open = false; this.openId = null; },
     }));

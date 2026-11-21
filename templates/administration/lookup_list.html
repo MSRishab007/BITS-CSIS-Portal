@@ -10,7 +10,7 @@
 <section class="card">
   <form method="get" class="filters" style="grid-template-columns: 2fr 1fr auto">
     <div class="field"><label for="q">Search</label><input type="search" id="q" name="q" value="{{ q }}"></div>
-    <div class="field"><label for="f-show">Show</label><select id="f-show" name="show" onchange="this.form.submit()">
+    <div class="field"><label for="f-show">Show</label><select id="f-show" name="show" onchange="this.form.requestSubmit()">
       <option value="all" {% if show == 'all' %}selected{% endif %}>All</option>
       <option value="active" {% if show == 'active' %}selected{% endif %}>Shown in dropdowns</option>
       <option value="hidden" {% if show == 'hidden' %}selected{% endif %}>Hidden</option></select></div>

@@ -9,7 +9,7 @@
     <p>{{ page.paginator.count }} invoice{{ page.paginator.count|pluralize }}{% if f.is_filtered %} match your filters{% endif %}.</p>
   </div>
   <div class="actions">
-    <a class="btn" href="{% url 'purchases:export' %}?{{ querystring }}" title="Download what's shown as Excel">{% include "partials/icon.html" with name="download" %} Export to Excel</a>
+    <a class="btn" hx-boost="false" href="{% url 'purchases:export' %}?{{ querystring }}" title="Download what's shown as Excel">{% include "partials/icon.html" with name="download" %} Export to Excel</a>
     <a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a></div>
 </div>
 

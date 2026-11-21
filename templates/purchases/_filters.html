@@ -12,7 +12,7 @@
     <input type="date" id="f-to" name="to" value="{{ f.date_to|date:'Y-m-d' }}" @change="period = 'custom'"></div>
   {% else %}
   <div class="field"><label for="f-period">Period</label>
-    <select id="f-period" name="period" x-model="period" @change="period !== 'custom' && $el.form.submit()">
+    <select id="f-period" name="period" x-model="period" @change="period !== 'custom' && $el.form.requestSubmit()">
       {% for v, l in periods %}<option value="{{ v }}" {% if f.period == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select></div>
   <div class="field" x-show="period === 'custom'" x-cloak><label for="f-from">From</label>
@@ -21,16 +21,16 @@
     <input type="date" id="f-to" name="to" value="{{ f.date_to|date:'Y-m-d' }}" :disabled="period !== 'custom'"></div>
   {% endif %}
   <div class="field"><label for="f-cat">Category</label>
-    <select id="f-cat" name="category" onchange="this.form.submit()"><option value="">All categories</option>
+    <select id="f-cat" name="category" onchange="this.form.requestSubmit()"><option value="">All categories</option>
       {% for c in categories %}<option value="{{ c.id }}" {% if f.category == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
     </select></div>
   <div class="field"><label for="f-fund">Funding</label>
-    <select id="f-fund" name="funding" onchange="this.form.submit()"><option value="">All funding</option>
+    <select id="f-fund" name="funding" onchange="this.form.requestSubmit()"><option value="">All funding</option>
       {% for s in funding_sources %}<option value="{{ s.id }}" {% if f.funding == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
     </select></div>
   {% if owners is not None %}
   <div class="field"><label for="f-owner">Faculty</label>
-    <select id="f-owner" name="owner" onchange="this.form.submit()"><option value="">Everyone</option>
+    <select id="f-owner" name="owner" onchange="this.form.requestSubmit()"><option value="">Everyone</option>
       {% for o in owners %}<option value="{{ o.id }}" {% if f.owner == o.id %}selected{% endif %}>{{ o.full_name }}</option>{% endfor %}
     </select></div>
   {% endif %}

@@ -1,0 +1,13 @@
+{% if messages %}
+<div class="toasts">
+  {% for message in messages %}
+  <div class="toast {{ message.tags }}" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)"
+       x-transition:enter="t-enter" x-transition:enter-start="t-toast-from" x-transition:enter-end="t-to"
+       x-transition:leave="t-leave" x-transition:leave-start="t-to" x-transition:leave-end="t-toast-from" role="status">
+    <span class="dot">{% if message.tags == "success" %}{% include "partials/icon.html" with name="check" %}{% elif message.tags == "error" %}{% include "partials/icon.html" with name="x" %}{% endif %}</span>
+    <span>{{ message }}</span>
+    <button type="button" @click="show = false" aria-label="Dismiss">×</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

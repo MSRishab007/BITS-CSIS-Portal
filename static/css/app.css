@@ -18,13 +18,14 @@
   --font: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "Geist Mono", ui-monospace, Consolas, monospace;
 
-  /* BITS logo colours */
-  --bits-blue: #5ac6e4;
-  --bits-red: #cc1e24;
-  --bits-yellow: #fcde72;
-  --bits-navy: #2a2a84;
+  /* BITS colours — official order and shades (as in BITS presentations):
+     yellow "innovate" -> light blue "achieve" -> red "lead" */
+  --bits-yellow: #f4ac34;
+  --bits-blue: #70c0e8;
+  --bits-red: #e83c28;
+  --bits-navy: #101040;
   --bits-gold: #b48a2a;
-  --tri: linear-gradient(90deg, var(--bits-blue) 0 33.33%, var(--bits-red) 33.33% 66.66%, var(--bits-yellow) 66.66% 100%);
+  --tri: linear-gradient(90deg, var(--bits-yellow) 0 33.33%, var(--bits-blue) 33.33% 66.66%, var(--bits-red) 66.66% 100%);
 
   /* Neutrals */
   --bg: #fafafa;
@@ -101,9 +102,9 @@ h3 { font-size: .92rem; font-weight: 600; }
 .tri-stripe { height: 3px; background: var(--tri); border-radius: 3px; }
 .tri-dots { display: inline-flex; gap: 3px; vertical-align: middle; }
 .tri-dots i { width: 6px; height: 6px; border-radius: 50%; display: block; }
-.tri-dots i:nth-child(1) { background: var(--bits-blue); }
-.tri-dots i:nth-child(2) { background: var(--bits-red); }
-.tri-dots i:nth-child(3) { background: var(--bits-yellow); }
+.tri-dots i:nth-child(1) { background: var(--bits-yellow); }
+.tri-dots i:nth-child(2) { background: var(--bits-blue); }
+.tri-dots i:nth-child(3) { background: var(--bits-red); }
 
 /* Page-change progress bar, in the three BITS colours */
 .nav-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 200; pointer-events: none;
@@ -112,14 +113,22 @@ h3 { font-size: .92rem; font-weight: 600; }
 .nav-progress.done { opacity: 0; transform: scaleX(1); transition: opacity .3s .1s, transform .15s; }
 @keyframes progress { 0% { transform: scaleX(0); } 10% { transform: scaleX(.35); } 100% { transform: scaleX(.92); } }
 
-/* Smooth page changes (browsers that support cross-document View Transitions) */
-@view-transition { navigation: auto; }
-::view-transition-old(root) { animation: vt-out .14s ease-in both; }
-::view-transition-new(root) { animation: vt-in .22s var(--ease) both; }
-@keyframes vt-out { to { opacity: 0; transform: translateY(-4px); } }
-@keyframes vt-in { from { opacity: 0; transform: translateY(6px); } }
+/* ---------- Page transitions ----------
+   The sidebar is captured as its own layer that doesn't move, so on every
+   navigation (in-app swaps and full loads alike) only the page area
+   animates: the old page lifts away, the new one rises in.               */
 .sidebar { view-transition-name: sidebar; }
-::view-transition-old(sidebar), ::view-transition-new(sidebar) { animation: none; }
+::view-transition-group(sidebar), ::view-transition-old(sidebar), ::view-transition-new(sidebar) { animation: none; }
+::view-transition-old(root) { animation: page-out .16s cubic-bezier(.4, 0, 1, 1) both; }
+::view-transition-new(root) { animation: page-in .32s .07s var(--ease) both; }
+@keyframes page-out { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes page-in { from { opacity: 0; transform: translateY(14px); } }
+@view-transition { navigation: auto; }
+
+/* Browsers without View Transitions: fade the new content in */
+@supports not (view-transition-name: none) {
+  #content { animation: page-in .34s var(--ease) both; }
+}
 
 /* ---------- App shell ---------- */
 .app { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 100vh; transition: grid-template-columns .25s var(--ease); }
@@ -173,7 +182,7 @@ kbd, .kbd { font-family: var(--mono); font-size: .7rem; padding: 1px 6px; border
   color: var(--text); border: 2px solid transparent;
   /* Tri-colour ring: surface fill inside, conic BITS colours in the border area */
   background: linear-gradient(var(--surface), var(--surface)) padding-box,
-              conic-gradient(var(--bits-blue) 0 33.3%, var(--bits-red) 0 66.6%, var(--bits-yellow) 0) border-box; }
+              conic-gradient(var(--bits-yellow) 0 33.3%, var(--bits-blue) 0 66.6%, var(--bits-red) 0) border-box; }
 .user-chip .name { font-weight: 600; font-size: .85rem; line-height: 1.2; display: block; }
 .user-chip .role { font-size: .72rem; color: var(--muted); display: block; }
 .foot-links { display: flex; gap: 14px; padding: 6px 6px 0; font-size: .8rem; }
@@ -257,6 +266,12 @@ tbody.stagger > tr { animation-name: fade-in; animation-duration: .35s; animatio
 .btn:active { transform: scale(.97); }
 .btn:focus-visible { outline: none; box-shadow: var(--ring); }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.is-loading { position: relative; color: transparent !important; pointer-events: none; }
+.btn.is-loading > * { visibility: hidden; }
+.btn.is-loading::after { content: ""; position: absolute; inset: 0; margin: auto; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid currentColor; border-color: var(--accent-ink) var(--accent-ink) transparent transparent; animation: spin .6s linear infinite; }
+.btn:not(.btn-primary).is-loading::after { border-color: var(--text) var(--text) transparent transparent; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .btn svg { width: 16px; height: 16px; flex: none; }
 .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: transparent;
   box-shadow: 0 1px 2px rgba(10,10,10,.1), inset 0 1px 0 rgba(255,255,255,.18); }
@@ -316,11 +331,12 @@ form.inline { display: inline; }
   box-shadow: var(--shadow); transition: transform .28s var(--snap), width .28s var(--snap); }
 
 /* Tabs */
-.tabs { display: flex; gap: 2px; flex-wrap: wrap; margin: -8px 0 18px; border-bottom: 1px solid var(--line); }
+.tabs { position: relative; display: flex; gap: 2px; flex-wrap: wrap; margin: -8px 0 18px; border-bottom: 1px solid var(--line); }
+.tab-ink { position: absolute; left: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent);
+  transition: transform .32s var(--snap), width .32s var(--snap); pointer-events: none; }
 .tab { position: relative; padding: 10px 12px; color: var(--muted); font-weight: 550; font-size: .86rem; }
 .tab:hover { color: var(--text); text-decoration: none; }
 .tab.active { color: var(--text); }
-.tab.active::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent); }
 
 /* ---------- Combobox (vendor / invoice pickers) ---------- */
 .combo { position: relative; }
@@ -450,9 +466,9 @@ table.table { width: 100%; border-collapse: collapse; font-size: .86rem; }
    (blue, red, gold, navy-violet), tuned to pass colour-blind checks, plus grey
    for "Other". Every slice is labelled with its share. */
 :root { --viz-1: #1d9bd0; --viz-other: #b9bdc6; --viz-grid: #eef0f2;
-  --donut-1: #1d9bd0; --donut-2: #cc1e24; --donut-3: #c08f12; --donut-4: #4347b9; }
+  --donut-1: #c08f12; --donut-2: #1d9bd0; --donut-3: #cc1e24; --donut-4: #4347b9; }
 @media (prefers-color-scheme: dark) { :root { --viz-1: #3fb4e6; --viz-other: #4b5060; --viz-grid: #1f2125;
-  --donut-1: #3fb4e6; --donut-2: #e5484d; --donut-3: #c38a0c; --donut-4: #8e93f0; } }
+  --donut-1: #c38a0c; --donut-2: #3fb4e6; --donut-3: #e5484d; --donut-4: #8e93f0; } }
 
 .viz-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 .viz-grid .span-all { grid-column: 1 / -1; }
@@ -623,6 +639,11 @@ a.hbar-label:hover { color: var(--accent-text); }
 .auth-card > p.muted { text-align: center; margin-top: 6px; }
 .auth-card form .field { margin-top: 16px; }
 .auth-card .btn { margin-top: 22px; height: 40px; }
+.tagline { display: flex; justify-content: center; gap: 10px; margin: -12px 0 18px; font-size: .74rem; font-weight: 650; letter-spacing: .04em; }
+.tagline span:nth-of-type(1) { color: #c9850f; }   /* innovate: BITS yellow, darkened for legibility */
+.tagline span:nth-of-type(2) { color: #2f97c9; }   /* achieve: BITS blue, darkened */
+.tagline span:nth-of-type(3) { color: var(--bits-red); }   /* lead */
+.tagline i { color: var(--line-strong); font-style: normal; }
 .auth-org { text-align: center; font-size: .78rem; color: var(--muted); margin-bottom: 20px; }
 
 /* "or" divider + Google button (sign-in page) */

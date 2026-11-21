@@ -8,14 +8,19 @@
   <link rel="icon" href="{% static 'img/bits-logo-160.png' %}" type="image/png">
   <link rel="preload" href="{% static 'vendor/geist/geist-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {# htmx: swap only the page content on navigation (sidebar stays, animated transitions) #}
+  <meta name="htmx-config" content='{"globalViewTransitions": true, "historyCacheSize": 0, "refreshOnHistoryMiss": true, "scrollBehavior": "instant", "includeIndicatorStyles": false, "responseHandling": [{"code": "204", "swap": false}, {"code": "...", "swap": true}]}'>
+  <script src="{% static 'vendor/htmx/htmx-2.0.11.min.js' %}"></script>
   <script src="{% static 'js/app.js' %}"></script>
+  <script src="{% static 'js/purchase-form.js' %}"></script>
   {% block head %}{% endblock %}
   <script defer src="{% static 'vendor/alpinejs/alpine-3.17.5.min.js' %}"></script>
 </head>
 <body>
 <div class="nav-progress" aria-hidden="true"></div>
 {% if user.is_authenticated and not user.must_change_password %}
-<div class="app" x-data="shell" :class="collapsed && 'collapsed'">
+<div class="app" x-data="shell" :class="collapsed && 'collapsed'"
+     hx-boost="true" hx-target="#content" hx-select="#content" hx-select-oob="#nav-links" hx-swap="outerHTML show:window:top">
   <aside class="sidebar" :class="nav && 'open'">
     <div class="tri-stripe" aria-hidden="true"></div>
     <a class="brand" href="{% url 'core:home' %}" title="{{ PORTAL_NAME }}">
@@ -34,6 +39,7 @@
     {% with path=request.path %}
     <nav class="nav" aria-label="Main">
       <span class="nav-indicator" aria-hidden="true"></span>
+      <div id="nav-links">
       <a class="nav-link {% if path == '/' %}active{% endif %}" href="{% url 'core:home' %}" title="Dashboard">{% include "partials/icon.html" with name="home" %}<span class="nav-label">Dashboard</span></a>
       <a class="nav-link {% if path|slice:':11' == '/purchases/' and path != '/purchases/new/' and path|slice:':16' != '/purchases/bulk/' %}active{% endif %}" href="{% url 'purchases:list' %}" title="Purchases">
         {% include "partials/icon.html" with name="list" %}<span class="nav-label">{% if user.can_view_all_records %}All purchases{% else %}My purchases{% endif %}</span></a>
@@ -49,8 +55,9 @@
           {% include "partials/icon.html" with name="settings" %}<span class="nav-label">Lists &amp; fields</span></a>
       {% endif %}
       {% if user.is_staff %}
-        <a class="nav-link" href="{% url 'admin:index' %}" title="Technical admin">{% include "partials/icon.html" with name="box" %}<span class="nav-label">Technical admin</span></a>
+        <a class="nav-link" href="{% url 'admin:index' %}" title="Technical admin" hx-boost="false">{% include "partials/icon.html" with name="box" %}<span class="nav-label">Technical admin</span></a>
       {% endif %}
+      </div>
     </nav>
     {% endwith %}
 
@@ -62,7 +69,7 @@
       </div>
       <div class="foot-links">
         <a href="{% url 'accounts:password_change' %}">Password</a>
-        <form method="post" action="{% url 'accounts:logout' %}" class="inline">{% csrf_token %}<button type="submit" class="link">Sign out</button></form>
+        <form method="post" action="{% url 'accounts:logout' %}" class="inline" hx-boost="false">{% csrf_token %}<button type="submit" class="link">Sign out</button></form>
       </div>
     </div>
   </aside>
@@ -75,8 +82,9 @@
       <strong>{{ DEPARTMENT_SHORT }} · {{ PORTAL_NAME }}</strong>
       <button class="btn btn-ghost btn-sm btn-icon" style="margin-left:auto" @click="$dispatch('open-cmdk')" aria-label="Search">{% include "partials/icon.html" with name="search" %}</button>
     </div>
-    <main class="content">
+    <main class="content" id="content">
       {% block content %}{% endblock %}
+      {% include "partials/toasts.html" %}
     </main>
   </div>
 </div>
@@ -133,19 +141,7 @@
 <main class="auth">{% block auth_content %}{% endblock %}</main>
 {% endif %}
 
-{% if messages and user.is_authenticated and not user.must_change_password %}{# sign-in pages show messages inline #}
-<div class="toasts">
-  {% for message in messages %}
-  <div class="toast {{ message.tags }}" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)"
-       x-transition:enter="t-enter" x-transition:enter-start="t-toast-from" x-transition:enter-end="t-to"
-       x-transition:leave="t-leave" x-transition:leave-start="t-to" x-transition:leave-end="t-toast-from" role="status">
-    <span class="dot">{% if message.tags == "success" %}{% include "partials/icon.html" with name="check" %}{% elif message.tags == "error" %}{% include "partials/icon.html" with name="x" %}{% endif %}</span>
-    <span>{{ message }}</span>
-    <button type="button" @click="show = false" aria-label="Dismiss">×</button>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

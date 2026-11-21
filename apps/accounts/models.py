@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
@@ -5,6 +7,28 @@ from django.utils import timezone
 
 from .managers import UserManager
 from .validators import validate_allowed_email_domain
+
+
+USERNAME_RE = r"^[a-z0-9._-]{2,40}$"
+username_validator = RegexValidator(
+    USERNAME_RE,
+    "Use 2–40 characters: lower-case letters, digits, '.', '_' or '-'. No '@'.",
+)
+
+
+def username_from_email(email: str) -> str:
+    """'Ravi.Kumar+x@pilani.bits-pilani.ac.in' -> 'ravi.kumarx'."""
+    local = (email or "").split("@", 1)[0].lower()
+    return re.sub(r"[^a-z0-9._-]", "", local)[:40]
+
+
+class LowercaseCharField(models.CharField):
+    """CharField that trims and lower-cases its value before validation,
+    so 'RKumar ' is accepted and stored as 'rkumar'."""
+
+    def to_python(self, value):
+        value = super().to_python(value)
+        return value.strip().lower() if isinstance(value, str) else value
 
 
 class Role(models.TextChoices):
@@ -33,6 +57,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         validators=[validate_allowed_email_domain],
         help_text="Institute email address; used to sign in.",
     )
+    username = LowercaseCharField(
+        max_length=40,
+        unique=True,
+        blank=True,
+        validators=[username_validator],
+        help_text="Short sign-in name. Leave blank to use the part of the email before '@'.",
+    )
     full_name = models.CharField(max_length=150)
     employee_id = models.CharField(
         "employee ID / PSRN",
@@ -57,6 +88,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         "Django admin access",
         default=False,
         help_text="Allows signing in to the technical /admin/ site.",
+    )
+
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text="Set when a password is generated; the user must choose their own at next sign-in.",
     )
 
     date_joined = models.DateTimeField(default=timezone.now)
@@ -94,6 +130,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def save(self, *args, **kwargs):
         self.email = (self.email or "").strip().lower()
+        self.username = (self.username or "").strip().lower()
+        if not self.username:
+            self.username = self._unique_username(username_from_email(self.email))
         # Record when an account is deactivated / reactivated.
         if not self.is_active and self.deactivated_at is None:
             self.deactivated_at = timezone.now()
@@ -104,6 +143,19 @@ class User(AbstractBaseUser, PermissionsMixin):
     def clean(self):
         super().clean()
         self.email = (self.email or "").strip().lower()
+        self.username = (self.username or "").strip().lower()
+
+    def _unique_username(self, base: str) -> str:
+        """Return `base`, or `base2`, `base3`… if it is already taken."""
+        if len(base) < 2:
+            base = f"{base}user"
+        candidate, n = base, 1
+        taken = User.objects.exclude(pk=self.pk)
+        while taken.filter(username=candidate).exists():
+            n += 1
+            suffix = str(n)
+            candidate = base[: 40 - len(suffix)] + suffix
+        return candidate
 
     # Names used by Django's auth helpers
     def get_full_name(self):

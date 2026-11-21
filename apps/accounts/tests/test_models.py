@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Role, User
+from apps.accounts.models import Role, User
 
 DOMAIN = "pilani.bits-pilani.ac.in"
 
@@ -57,6 +57,33 @@ class UserModelTests(TestCase):
         u.is_active = True
         u.save()
         self.assertIsNone(u.deactivated_at)
+
+
+@override_settings(ALLOWED_EMAIL_DOMAINS=[DOMAIN])
+class UsernameTests(TestCase):
+    def test_username_defaults_to_email_local_part(self):
+        u = User.objects.create_user(f"Ravi.Kumar@{DOMAIN}", "x", full_name="Ravi")
+        self.assertEqual(u.username, "ravi.kumar")
+
+    def test_username_collision_gets_number(self):
+        User.objects.create_user(f"a@{DOMAIN}", "x", full_name="A", username="ravi")
+        u = User.objects.create_user(f"ravi@{DOMAIN}", "x", full_name="Ravi")
+        self.assertEqual(u.username, "ravi2")
+
+    def test_username_lowercased_and_unique(self):
+        User.objects.create_user(f"a@{DOMAIN}", "x", full_name="A", username="RKumar")
+        self.assertTrue(User.objects.filter(username="rkumar").exists())
+        with self.assertRaises(ValidationError):
+            User.objects.create_user(f"b@{DOMAIN}", "x", full_name="B", username="rkumar")
+
+    def test_username_rejects_at_sign_and_spaces(self):
+        for i, bad in enumerate(("ravi@kumar", "ravi kumar", "r")):
+            with self.subTest(username=bad), self.assertRaises(ValidationError):
+                User.objects.create_user(f"u{i}@{DOMAIN}", "x", full_name="X", username=bad)
+
+    def test_short_local_part_padded(self):
+        u = User.objects.create_user(f"r@{DOMAIN}", "x", full_name="R")
+        self.assertEqual(u.username, "ruser")
 
 
 @override_settings(ALLOWED_EMAIL_DOMAINS=[])

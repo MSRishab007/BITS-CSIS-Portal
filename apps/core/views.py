@@ -1,6 +1,7 @@
+from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.http import JsonResponse
-from django.shortcuts import redirect
+from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
 
@@ -16,6 +17,7 @@ def healthz(request):
 
 
 @require_GET
+@login_required
 def home(request):
-    # Temporary: until the portal UI exists, send people to the admin.
-    return redirect("admin:index")
+    # Placeholder home page; becomes the dashboard in a later commit.
+    return render(request, "core/home.html")

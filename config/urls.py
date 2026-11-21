@@ -8,5 +8,6 @@ admin.site.index_title = settings.DEPARTMENT_NAME
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("accounts/", include("apps.accounts.urls")),
     path("", include("apps.core.urls")),
 ]

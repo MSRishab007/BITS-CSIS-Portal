@@ -4,6 +4,7 @@ Settings for the department asset & purchase portal.
 All environment-specific values come from a `.env` file (see `.env.example`),
 so the same code runs on a laptop and on the college server.
 """
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -41,6 +42,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third-party
+    "axes",
     # Project apps
     "apps.core",
     "apps.accounts",
@@ -54,6 +57,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.accounts.middleware.ForcePasswordChangeMiddleware",
+    # Must be last: turns a locked-out login into a "too many attempts" page.
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -120,7 +126,35 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LOGIN_URL = "admin:login"  # replaced by the portal's own login page later
+# Order matters: axes checks for a lockout before the password is tested.
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "apps.accounts.backends.EmailOrUsernameBackend",
+]
+
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "core:home"
+LOGOUT_REDIRECT_URL = "accounts:login"
+
+# Length of passwords generated for new users and resets (excluding dashes).
+GENERATED_PASSWORD_LENGTH = 12
+
+# ---- Login lockout (django-axes) ----------------------------------------
+# 5 wrong passwords for the same account -> that account is locked for
+# 15 minutes. Counted per account, not per IP, because the whole campus may
+# share one public IP. A successful login resets the count.
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+AXES_LOCKOUT_PARAMETERS = ["username"]
+AXES_USERNAME_CALLABLE = "apps.accounts.backends.axes_username"
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_TEMPLATE = "accounts/locked_out.html"
+
+SILENCED_SYSTEM_CHECKS = [
+    # axes suggests also keying on IP. We lock per account on purpose
+    # (shared campus IP); changing browser/cookies can't bypass it.
+    "axes.W006",
+]
 
 # Email domains allowed to hold accounts (lower-case). Empty list = any.
 ALLOWED_EMAIL_DOMAINS = [d.strip().lower() for d in env("ALLOWED_EMAIL_DOMAINS") if d.strip()]

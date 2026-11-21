@@ -75,6 +75,18 @@ static/            site-wide CSS/JS/images
 media/             uploaded bills (private, git-ignored)
 ```
 
+## Signing in & passwords
+
+- Sign in at `/accounts/login/` with **email or username** (case doesn't matter).
+  The username defaults to the part of the email before `@`.
+- **Adding a user** (Admin → Users → Add): no password is typed. One is
+  generated, shown **once** with Copy buttons, and the user must choose
+  their own password at first sign-in.
+- **Forgotten password:** select the user(s) in the list → action
+  *Generate new password for selected users* → confirm.
+- **Lockout:** 5 wrong passwords lock that account for 15 minutes.
+  Unlock early from Admin → Axes → Access attempts (delete the entry).
+
 ## Design notes
 
 - **Login by email, no username.** Password login works now. Google sign-in

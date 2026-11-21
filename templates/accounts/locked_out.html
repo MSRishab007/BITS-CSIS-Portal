@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Too many attempts{% endblock %}
+{% block main_class %}center{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>Too many sign-in attempts</h1>
+  <p>This account is locked for 15 minutes after 5 incorrect passwords.</p>
+  <p class="muted">Try again later, or ask the department office to reset your password.</p>
+  <a class="btn" href="{% url 'accounts:login' %}">Back to sign in</a>
+</div>
+{% endblock %}

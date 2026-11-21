@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load portal_tags %}
+{% block title %}Bulk upload{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Bulk upload</div>
+    <h1>Upload many purchases at once</h1>
+    <p>Fill the template, upload it, check the preview, then import. Nothing is saved until you confirm.</p>
+  </div>
+</div>
+
+{% if not result or not result.ok %}
+<div class="grid grid-2 stagger" style="align-items:start">
+  <section class="card" style="--i:0">
+    <div class="card-head"><div><span class="badge badge-accent">Step 1</span><h2 style="margin-top:8px">Download the template</h2>
+      <p>Includes dropdowns for categories, types, funding sources, venues and vendors, plus an example sheet.</p></div></div>
+    <div class="actions">
+      <a class="btn btn-primary" href="{% url 'purchases:bulk_template' 'xlsx' %}">{% include "partials/icon.html" with name="file" %} Excel template (.xlsx)</a>
+      <a class="btn" href="{% url 'purchases:bulk_template' 'csv' %}">CSV template</a>
+    </div>
+    <ul class="small muted" style="margin:16px 0 0;padding-left:18px">
+      <li>One row per item. Repeat the invoice details on each row of the same invoice.</li>
+      <li>New vendors can be typed in; they're added on import.</li>
+      <li>Attach bills afterwards from each invoice's Edit page.</li>
+      <li>Up to {{ max_rows }} rows per file.</li>
+    </ul>
+  </section>
+
+  <section class="card" style="--i:1">
+    <div class="card-head"><div><span class="badge badge-accent">Step 2</span><h2 style="margin-top:8px">Upload the filled file</h2>
+      <p>You'll see a preview and any problems before anything is saved.</p></div></div>
+    <form method="post" enctype="multipart/form-data" x-data="{ name: '', over: false, busy: false }" @submit="busy = true">
+      {% csrf_token %}
+      <label class="dropzone" :class="over && 'over'" @dragover.prevent="over = true" @dragleave="over = false"
+             @drop.prevent="over = false; $refs.file.files = $event.dataTransfer.files; name = $refs.file.files[0]?.name || ''">
+        <input type="file" name="file" accept=".xlsx,.csv" x-ref="file" hidden @change="name = $event.target.files[0]?.name || ''">
+        <span class="empty-icon">{% include "partials/icon.html" with name="file" %}</span>
+        <strong x-text="name || 'Drop your file here or click to choose'">Drop your file here or click to choose</strong>
+        <span class="small muted">.xlsx or .csv, up to 5 MB</span>
+      </label>
+      {% if file_error %}<div class="form-errors" style="margin-top:12px">{{ file_error }}</div>{% endif %}
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:14px" :disabled="!name || busy">
+        <span x-text="busy ? 'Checking…' : 'Check file'">Check file</span></button>
+    </form>
+  </section>
+</div>
+{% endif %}
+
+{% if result and not result.ok %}
+<section class="card" style="margin-top:18px">
+  <div class="card-head">
+    <div><h2>{{ result.errors|length }} problem{{ result.errors|length|pluralize }} found in {{ filename }}</h2>
+      <p>Nothing was saved. Fix these in your file and upload it again. Row numbers match the spreadsheet.</p></div>
+    <span class="badge badge-error">Not imported</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th style="width:80px">Row</th><th style="width:220px">Column</th><th>Problem</th></tr></thead>
+      <tbody>
+      {% for e in result.errors %}
+        <tr><td class="mono">{{ e.row }}</td><td>{{ e.column|default:"—" }}</td><td>{{ e.message }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if result and result.ok %}
+<div class="stats stagger">
+  <div class="card stat accent" style="--i:0"><div class="stat-label">Ready to import</div><div class="stat-value">{{ result.invoices|length }} invoice{{ result.invoices|length|pluralize }}</div>
+    <div class="stat-note">{{ result.item_count }} item{{ result.item_count|pluralize }} from {{ result.row_count }} row{{ result.row_count|pluralize }}</div></div>
+  <div class="card stat" style="--i:1"><div class="stat-label">Total of bills</div><div class="stat-value">₹{{ result.total_amount|inr }}</div></div>
+  <div class="card stat" style="--i:2"><div class="stat-label">New vendors</div><div class="stat-value">{{ result.new_vendors|length }}</div>
+    {% if result.new_vendors %}<div class="stat-note">{{ result.new_vendors|join:", " }}</div>{% endif %}</div>
+</div>
+
+<section class="card">
+  <div class="card-head"><div><h2>Preview of {{ filename }}</h2><p>All rows passed the checks. This is exactly what will be saved.</p></div>
+    <span class="badge badge-ok">{% include "partials/icon.html" with name="check" %} No problems</span></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Row</th><th>Invoice</th><th>Vendor</th>{% if user.can_view_all_records %}<th>Faculty</th>{% endif %}<th>Date</th><th>Items</th><th class="right">Bill</th></tr></thead>
+      <tbody>
+      {% for inv in result.invoices %}
+        <tr>
+          <td class="mono">{{ inv.row }}</td>
+          <td class="nowrap"><strong>{{ inv.invoice_number }}</strong></td>
+          <td>{{ inv.vendor }}{% if inv.vendor_new %} <span class="badge badge-accent">new</span>{% endif %}</td>
+          {% if user.can_view_all_records %}<td>{{ inv.owner }}</td>{% endif %}
+          <td class="nowrap">{{ inv.purchase_date|date:"d M Y" }}</td>
+          <td>{% for it in inv.items %}<div>{{ it.name }} <span class="muted small">× {{ it.quantity }} · {{ it.category }} › {{ it.type }} · {{ it.funding }}</span></div>{% endfor %}</td>
+          <td class="right nowrap">₹{{ inv.bill_amount|inr }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="save-bar">
+  <div class="totals"><span><strong>{{ result.invoices|length }}</strong> invoices</span><span><strong>{{ result.item_count }}</strong> items</span></div>
+  <form method="post" action="{% url 'purchases:bulk_confirm' %}" class="actions" x-data="{ busy: false }" @submit="busy = true">
+    {% csrf_token %}
+    <a class="btn btn-ghost" href="{% url 'purchases:bulk_upload' %}">Cancel</a>
+    <button type="submit" class="btn btn-primary" :disabled="busy">{% include "partials/icon.html" with name="check" %}
+      <span x-text="busy ? 'Importing…' : 'Import {{ result.invoices|length }} invoice{{ result.invoices|length|pluralize }}'">Import</span></button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

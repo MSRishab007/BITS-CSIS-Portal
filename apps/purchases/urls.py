@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from . import views
 
@@ -12,6 +12,9 @@ urlpatterns = [
     path("<int:pk>/add-items/", views.purchase_add_items, name="add_items"),
     path("<int:pk>/delete/", views.purchase_delete, name="delete"),
     path("<int:pk>/bill/", views.bill_file, name="bill"),
+    path("bulk/", views.bulk_upload, name="bulk_upload"),
+    path("bulk/confirm/", views.bulk_confirm, name="bulk_confirm"),
+    re_path(r"^bulk/template\.(?P<fmt>xlsx|csv)$", views.bulk_template, name="bulk_template"),
     path("api/vendors/", views.api_vendors, name="api_vendors"),
     path("api/my-invoices/", views.api_my_invoices, name="api_my_invoices"),
 ]

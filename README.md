@@ -100,6 +100,7 @@ media/             uploaded bills (private, git-ignored)
 | `/purchases/<id>/` | Invoice details, items, change history |
 | `/purchases/<id>/add-items/` | Add items to an invoice already recorded |
 | `/purchases/<id>/edit/`, `/delete/` | Owner, Admin or HoD only |
+| `/purchases/bulk/` | Bulk upload: template download, preview, import |
 | `/purchases/<id>/bill/` | Bill file, streamed only to people allowed to see the invoice |
 
 **Vendor box:** type to search existing vendors; pick one, or choose
@@ -107,6 +108,14 @@ media/             uploaded bills (private, git-ignored)
 (ignoring case, spaces and punctuation) uses that vendor.
 **Invoice number box:** while typing, shows *your own* past invoices; picking
 one opens "add items" for it. Typing a new number starts a new invoice.
+
+**Bulk upload** (`/purchases/bulk/`): download the Excel/CSV template (built
+from the current lookup lists and custom fields, with dropdowns), fill one row
+per item, upload. The file is checked with a dry run (the real import inside a
+transaction that is then rolled back) and errors are listed by row and column.
+Only an error-free file can be imported, and the import is all-or-nothing.
+Admin/HoD templates have a "Faculty email or username" column for uploading
+on behalf of faculty. Code: `apps/purchases/bulk.py`.
 
 Front end: Django templates + Alpine.js (in `static/vendor/`, no build step),
 styles in `static/css/app.css`, form behaviour in `static/js/purchase-form.js`.

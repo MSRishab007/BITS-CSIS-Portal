@@ -23,9 +23,11 @@
 
     {% with path=request.path %}
     <a class="nav-link {% if path == '/' %}active{% endif %}" href="{% url 'core:home' %}">{% include "partials/icon.html" with name="home" %} Dashboard</a>
-    <a class="nav-link {% if path|slice:':11' == '/purchases/' and path != '/purchases/new/' %}active{% endif %}" href="{% url 'purchases:list' %}">
+    <a class="nav-link {% if path|slice:':11' == '/purchases/' and path != '/purchases/new/' and path|slice:':16' != '/purchases/bulk/' %}active{% endif %}" href="{% url 'purchases:list' %}">
       {% include "partials/icon.html" with name="list" %} {% if user.can_view_all_records %}All purchases{% else %}My purchases{% endif %}
     </a>
+    <a class="nav-link {% if path == '/purchases/bulk/' %}active{% endif %}" href="{% url 'purchases:bulk_upload' %}">
+      {% include "partials/icon.html" with name="file" %} Bulk upload</a>
     {% if user.is_staff %}
       <div class="nav-section">Manage</div>
       <a class="nav-link" href="{% url 'admin:index' %}">{% include "partials/icon.html" with name="settings" %} Admin settings</a>

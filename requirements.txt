@@ -5,3 +5,4 @@ argon2-cffi>=23.1
 gunicorn>=23.0
 django-axes>=8.0,<10
 django-simple-history>=3.7,<4
+openpyxl>=3.1,<4

@@ -1,6 +1,9 @@
 import os
+import time
+import uuid
 from itertools import chain
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -8,14 +11,16 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
 from apps.catalog.models import Category, CustomField, FundingSource, Vendor, normalize_vendor_name
 from apps.core.templatetags.portal_tags import inr
 
+from . import bulk
 from .forms import ItemFormSet, PurchaseForm
 from .models import Purchase, PurchaseItem, can_edit_purchase
 
@@ -289,3 +294,113 @@ def api_my_invoices(request):
         "add_items_url": reverse("purchases:add_items", args=[p.id]),
     } for p in qs[:10]]
     return JsonResponse({"results": results})
+
+
+# --------------------------------------------------------------------------
+# Bulk upload
+# --------------------------------------------------------------------------
+BULK_SESSION_KEY = "bulk_upload"
+BULK_MAX_SIZE = 5 * 1024 * 1024
+
+
+def _bulk_dir():
+    path = os.path.join(settings.MEDIA_ROOT, "bulk_tmp")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def _sweep_bulk_dir(max_age_hours=24):
+    """Delete abandoned uploads (never confirmed) older than a day."""
+    cutoff = time.time() - max_age_hours * 3600
+    for name in os.listdir(_bulk_dir()):
+        full = os.path.join(_bulk_dir(), name)
+        try:
+            if os.path.getmtime(full) < cutoff:
+                os.remove(full)
+        except OSError:
+            pass
+
+
+def _pending_upload(request):
+    info = request.session.get(BULK_SESSION_KEY)
+    if not info:
+        return None
+    path = os.path.join(_bulk_dir(), info["file"])
+    return (path, info["name"]) if os.path.exists(path) else None
+
+
+@login_required
+@require_GET
+def bulk_template(request, fmt):
+    stamp = timezone.localdate().strftime("%Y%m%d")
+    if fmt == "xlsx":
+        response = HttpResponse(
+            bulk.build_template_xlsx(request.user),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    else:
+        response = HttpResponse(bulk.build_template_csv(request.user), content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="purchase-upload-template-{stamp}.{fmt}"'
+    return response
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def bulk_upload(request):
+    context = {"max_rows": bulk.MAX_ROWS}
+    if request.method == "POST":
+        upload = request.FILES.get("file")
+        error = None
+        if upload is None:
+            error = "Choose a file to upload."
+        elif not upload.name.lower().endswith((".xlsx", ".csv")):
+            error = "Upload the .xlsx or .csv template."
+        elif upload.size > BULK_MAX_SIZE:
+            error = "The file is larger than 5 MB."
+        if error:
+            context["file_error"] = error
+            return render(request, "purchases/bulk_upload.html", context)
+
+        _sweep_bulk_dir()
+        ext = os.path.splitext(upload.name)[1].lower()
+        stored = f"{uuid.uuid4().hex}{ext}"
+        path = os.path.join(_bulk_dir(), stored)
+        with open(path, "wb") as out:
+            for chunk in upload.chunks():
+                out.write(chunk)
+        try:
+            headers, data = bulk.read_file(path, upload.name)
+        except bulk.FileError as e:
+            os.remove(path)
+            context["file_error"] = str(e)
+            return render(request, "purchases/bulk_upload.html", context)
+
+        result = bulk.run_import(headers, data, request.user, commit=False)  # dry run
+        if result.ok:
+            request.session[BULK_SESSION_KEY] = {"file": stored, "name": upload.name}
+        else:
+            os.remove(path)
+            request.session.pop(BULK_SESSION_KEY, None)
+        context.update({"result": result, "filename": upload.name})
+    return render(request, "purchases/bulk_upload.html", context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def bulk_confirm(request):
+    pending = _pending_upload(request)
+    if pending is None:
+        messages.error(request, "That upload has expired. Please upload the file again.")
+        return redirect("purchases:bulk_upload")
+    path, name = pending
+    headers, data = bulk.read_file(path, name)
+    # Checked again: lookup lists or invoices may have changed since the preview.
+    result = bulk.run_import(headers, data, request.user, commit=True)
+    request.session.pop(BULK_SESSION_KEY, None)
+    os.remove(path)
+    if not result.committed:
+        return render(request, "purchases/bulk_upload.html",
+                      {"result": result, "filename": name, "max_rows": bulk.MAX_ROWS})
+    n, m = len(result.invoices), result.item_count
+    extra = f" {len(result.new_vendors)} new vendor(s) added." if result.new_vendors else ""
+    messages.success(request, f"Imported {n} invoice{'s' * (n != 1)} with {m} item{'s' * (m != 1)}.{extra}")
+    return redirect("purchases:list")

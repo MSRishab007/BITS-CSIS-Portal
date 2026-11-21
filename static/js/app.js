@@ -195,6 +195,34 @@
       groupStart(i) { return i === 0 || this.results[i - 1].group !== this.results[i].group; },
     }));
 
+    // Row action menu (⋯). Positioned against the window so table scrolling can't clip it.
+    Alpine.data("menu", () => ({
+      o: false, x: 0, y: 0,
+      toggle() {
+        if (this.o) { this.o = false; return; }
+        const r = this.$refs.btn.getBoundingClientRect();
+        this.x = Math.max(8, r.right - 200);
+        this.y = r.bottom + 6;
+        if (this.y + 180 > window.innerHeight) this.y = r.top - 6 - 150;
+        this.o = true;
+      },
+      init() { window.addEventListener("scroll", () => (this.o = false), { passive: true }); },
+    }));
+
+    // Slide-over preview of an invoice (purchase list).
+    Alpine.data("peek", () => ({
+      open: false, loading: false, html: "", openId: null,
+      async show(id, url) {
+        this.openId = id; this.open = true; this.loading = true;
+        try {
+          const res = await fetch(url, { credentials: "same-origin" });
+          this.html = res.ok ? await res.text() : "<p class='muted'>Couldn't load this invoice.</p>";
+        } catch (e) { this.html = "<p class='muted'>Couldn't load this invoice.</p>"; }
+        this.loading = false;
+      },
+      close() { this.open = false; this.openId = null; },
+    }));
+
     // Donut: hovering a legend row highlights its slice, and vice versa.
     Alpine.data("donut", () => ({
       hot: null,

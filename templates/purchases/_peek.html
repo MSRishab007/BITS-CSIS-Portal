@@ -1,0 +1,37 @@
+{% load portal_tags %}
+<div class="peek-head">
+  <div>
+    <div class="eyebrow">Invoice</div>
+    <h2 class="mono" style="font-size:1.25rem">{{ purchase.invoice_number }}</h2>
+    <p class="muted small" style="margin:4px 0 0">{{ purchase.vendor }} · {{ purchase.purchase_date|date:"d M Y" }}</p>
+  </div>
+</div>
+<div class="peek-amount">
+  <div><div class="muted small">Bill amount</div><div class="peek-big">₹{{ purchase.bill_amount|inr }}</div></div>
+  {% if purchase.bill_file %}<a class="btn btn-sm" href="{% url 'purchases:bill' purchase.pk %}" target="_blank">{% include "partials/icon.html" with name="file" %} View bill</a>{% endif %}
+</div>
+<dl class="meta peek-meta">
+  <div><dt>Purchased by</dt><dd>{{ purchase.owner.full_name }}</dd></div>
+  <div><dt>Order / PO</dt><dd>{{ purchase.order_number|default:"—" }}</dd></div>
+  <div><dt>Delivered</dt><dd>{{ purchase.delivery_date|date:"d M Y"|default:"—" }}</dd></div>
+  <div><dt>Recorded</dt><dd>{{ purchase.created_at|date:"d M Y" }}</dd></div>
+</dl>
+<h3 style="margin:22px 0 10px">{{ items|length }} item{{ items|length|pluralize }}</h3>
+<ul class="peek-items">
+  {% for it in items %}
+  <li style="--i: {{ forloop.counter0 }}">
+    <div><strong>{{ it.item_name }}</strong>
+      <div class="small muted">{{ it.category.name }} › {{ it.item_type.name }} · {{ it.funding_source.name }}{% if it.venue %} · {{ it.venue.name }}{% endif %}</div>
+      {% if it.warranty_end_date %}<div class="small muted">Warranty until {{ it.warranty_end_date|date:"d M Y" }}</div>{% endif %}</div>
+    <div class="right nowrap"><div class="num">× {{ it.quantity }}</div>{% if it.amount is not None %}<div class="small muted num">₹{{ it.amount|inr }}</div>{% endif %}</div>
+  </li>
+  {% endfor %}
+</ul>
+{% if purchase.remarks %}<p class="small" style="margin-top:16px"><span class="muted">Remarks:</span> {{ purchase.remarks }}</p>{% endif %}
+<div class="peek-actions">
+  <a class="btn btn-primary" href="{% url 'purchases:detail' purchase.pk %}">Open full page {% include "partials/icon.html" with name="arrow-right" %}</a>
+  {% if can_edit %}
+    <a class="btn" href="{% url 'purchases:edit' purchase.pk %}">{% include "partials/icon.html" with name="edit" %} Edit</a>
+    <a class="btn" href="{% url 'purchases:add_items' purchase.pk %}">{% include "partials/icon.html" with name="plus" %} Add items</a>
+  {% endif %}
+</div>

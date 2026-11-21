@@ -31,14 +31,18 @@
   </form>
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>Type</th><th class="right">Order</th><th class="right">Used by</th><th>Status</th><th class="right">Actions</th></tr></thead>
+      <thead><tr><th>Type</th><th class="right">Order</th><th class="right">Used by</th><th>Status</th><th class="right"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody>
       {% for t in types %}
         <tr><td><strong>{{ t.name }}</strong></td><td class="right">{{ t.sort_order }}</td><td class="right">{{ t.usage }} item{{ t.usage|pluralize }}</td>
           <td>{% if t.is_active %}<span class="badge badge-ok">Shown</span>{% else %}<span class="badge">Hidden</span>{% endif %}</td>
-          <td class="right nowrap"><a class="btn btn-sm btn-ghost" href="{% url 'administration:type_edit' t.pk %}">Rename</a>
-            <form method="post" action="{% url 'administration:type_toggle' t.pk %}" class="inline">{% csrf_token %}
-              <button class="btn btn-sm btn-ghost" type="submit">{% if t.is_active %}Hide{% else %}Show{% endif %}</button></form></td></tr>
+          <td class="right">
+            {% include "partials/menu_open.html" %}
+              <a class="menu-item" href="{% url 'administration:type_edit' t.pk %}">{% include "partials/icon.html" with name="edit" %} Rename</a>
+              <form method="post" action="{% url 'administration:type_toggle' t.pk %}">{% csrf_token %}
+                <button class="menu-item" type="submit">{% if t.is_active %}{% include "partials/icon.html" with name="eye-off" %} Hide{% else %}{% include "partials/icon.html" with name="eye" %} Show{% endif %}</button></form>
+            {% include "partials/menu_close.html" %}
+          </td></tr>
       {% empty %}<tr><td colspan="5" class="muted">No types yet. Add one above.</td></tr>
       {% endfor %}
       </tbody>

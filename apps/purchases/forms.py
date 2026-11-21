@@ -108,8 +108,8 @@ class PurchaseForm(CustomFieldsMixin, forms.ModelForm):
             self.fields["owner"].queryset = active_or_current(User.objects.all(), self.instance.owner_id)
             self.fields["owner"].label = "Purchased by"
             self.fields["owner"].label_from_instance = lambda u: f"{u.full_name} ({u.username})"
-            if not self.instance.pk:
-                self.initial.setdefault("owner", user.pk)
+            if not self.instance.pk and not self.initial.get("owner"):
+                self.initial["owner"] = user.pk
         else:
             del self.fields["owner"]
             if not self.instance.pk:

@@ -152,6 +152,11 @@ class CreatePurchaseTests(ViewTestBase):
         self.client.post(self.url, self.post_data(vendor=self.dell.pk, vendor_name=self.dell.name, owner=self.f2.pk))
         self.assertEqual(Purchase.objects.get().owner, self.f1)
 
+    def test_hod_form_defaults_owner_to_self(self):
+        self.client.force_login(self.hod)
+        r = self.client.get(self.url)
+        self.assertContains(r, f'<option value="{self.hod.pk}" selected>')
+
     def test_hod_can_record_for_faculty(self):
         self.client.force_login(self.hod)
         self.client.post(self.url, self.post_data(vendor=self.dell.pk, vendor_name=self.dell.name, owner=self.f2.pk))
@@ -226,7 +231,7 @@ class AccessTests(ViewTestBase):
     def test_detail_edit_delete_permissions(self):
         p = self.make_purchase(self.f2, "T-1")
         self.client.force_login(self.f1)
-        for name in ("detail", "edit", "delete", "bill"):
+        for name in ("detail", "edit", "delete", "bill", "peek"):
             self.assertEqual(self.client.get(reverse(f"purchases:{name}", args=[p.pk])).status_code, 404, name)
         self.client.force_login(self.hod)
         self.assertEqual(self.client.get(reverse("purchases:edit", args=[p.pk])).status_code, 200)
@@ -265,6 +270,25 @@ class AccessTests(ViewTestBase):
         self.assertEqual(r["X-Content-Type-Options"], "nosniff")
         self.client.force_login(self.f2)
         self.assertEqual(self.client.get(reverse("purchases:bill", args=[p.pk])).status_code, 404)
+
+    def test_peek_fragment(self):
+        p = self.make_purchase(self.f1, "PK-1")
+        self.client.force_login(self.f1)
+        r = self.client.get(reverse("purchases:peek", args=[p.pk]))
+        self.assertContains(r, "PK-1")
+        self.assertContains(r, "Open full page")
+        self.assertNotContains(r, "<html")  # a fragment, not a full page
+        self.client.force_login(self.hod)
+        self.assertContains(self.client.get(reverse("purchases:peek", args=[p.pk])), "Edit")
+
+    def test_filter_chips(self):
+        self.make_purchase(self.f1, "C-1")
+        self.client.force_login(self.f1)
+        r = self.client.get(reverse("purchases:list"), {"period": "all", "category": self.gadgets.pk, "q": "C-1"})
+        self.assertContains(r, 'class="chip"', count=2)
+        self.assertContains(r, "Clear all")
+        # removing the search chip keeps the category filter
+        self.assertContains(r, f'href="?period=all&amp;category={self.gadgets.pk}"')
 
     def test_dashboard(self):
         self.make_purchase(self.f1, "H-1")

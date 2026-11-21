@@ -1,0 +1,5 @@
+<div class="menu-wrap" x-data="menu" @click.outside="o = false" @keydown.escape="o = false">
+  <button type="button" class="btn btn-ghost btn-sm btn-icon" x-ref="btn" @click="toggle()" :aria-expanded="o" aria-label="Actions">{% include "partials/icon.html" with name="dots" %}</button>
+  <div class="menu" x-show="o" x-cloak :style="`left:${x}px; top:${y}px`"
+       x-transition:enter="t-enter" x-transition:enter-start="t-from" x-transition:enter-end="t-to"
+       x-transition:leave="t-leave" x-transition:leave-start="t-to" x-transition:leave-end="t-from">

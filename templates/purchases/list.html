@@ -17,7 +17,7 @@
   {% include "purchases/_filters.html" with show_search=True %}
 </section>
 
-<section class="card">
+<section class="card" x-data="peek">
   {% if page.object_list %}
   <div class="table-wrap" style="margin-top:-22px">
     <table class="table">
@@ -27,9 +27,10 @@
       </tr></thead>
       <tbody class="stagger">
       {% for p in page.object_list %}
-        <tr style="--i: {{ forloop.counter0 }}">
-          <td class="nowrap">{{ p.purchase_date|date:"d M Y" }}</td>
-          <td><a class="row-link" href="{% url 'purchases:detail' p.pk %}">{{ p.invoice_number }}</a>
+        <tr style="--i: {{ forloop.counter0 }}" class="clickable" :class="openId === {{ p.pk }} && 'is-open'"
+            @click="if (!$event.target.closest('a')) show({{ p.pk }}, '{% url 'purchases:peek' p.pk %}')">
+          <td class="nowrap muted">{{ p.purchase_date|date:"d M Y" }}</td>
+          <td><a class="row-link mono" href="{% url 'purchases:detail' p.pk %}">{{ p.invoice_number }}</a>
             {% if p.order_number %}<div class="small muted">PO {{ p.order_number }}</div>{% endif %}</td>
           <td>{{ p.vendor }}</td>
           {% if user.can_view_all_records %}<td>{{ p.owner.full_name }}</td>{% endif %}
@@ -58,5 +59,20 @@
     <a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a>
   </div>
   {% endif %}
+
+  {# Slide-over preview #}
+  <template x-teleport="body">
+    <div x-show="open" x-cloak class="drawer-root" @keydown.escape.window="close()">
+      <div class="drawer-scrim" @click="close()" x-show="open" x-transition.opacity.duration.200ms></div>
+      <aside class="drawer" x-show="open" role="dialog" aria-label="Invoice preview"
+             x-transition:enter="drawer-enter" x-transition:enter-start="drawer-from" x-transition:enter-end="drawer-to"
+             x-transition:leave="drawer-leave" x-transition:leave-start="drawer-to" x-transition:leave-end="drawer-from">
+        <button type="button" class="btn btn-ghost btn-sm btn-icon drawer-close" @click="close()" aria-label="Close">{% include "partials/icon.html" with name="x" %}</button>
+        <div x-show="loading" class="drawer-skeleton"><span></span><span></span><span></span><span></span></div>
+        <div x-show="!loading" x-html="html"></div>
+      </aside>
+    </div>
+  </template>
 </section>
+<p class="small muted">Tip: click a row to preview it here; click the invoice number to open the full page.</p>
 {% endblock %}

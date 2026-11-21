@@ -28,27 +28,30 @@
   {% if rows %}
   <div class="table-wrap" style="margin-top:-22px">
     <table class="table">
-      <thead><tr><th>Name</th><th>Username</th><th>Role</th><th class="right">Invoices</th><th>Last sign-in</th><th class="right">Actions</th></tr></thead>
+      <thead><tr><th>Name</th><th>Username</th><th>Role</th><th class="right">Invoices</th><th>Last sign-in</th><th class="right"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody class="stagger">
       {% for p, manageable in rows %}
         <tr style="--i: {{ forloop.counter0 }}">
-          <td><strong>{{ p.full_name }}</strong>{% if p.pk == user.pk %} <span class="badge">you</span>{% endif %}
-            <div class="small muted">{{ p.email }}{% if p.designation %} · {{ p.designation }}{% endif %}</div></td>
+          <td><div class="person"><span class="avatar sm">{{ p.full_name|slice:":1"|upper }}</span><div><a class="row-link" href="{% if manageable %}{% url 'administration:person_edit' p.pk %}{% else %}#{% endif %}">{{ p.full_name }}</a>{% if p.pk == user.pk %} <span class="badge">you</span>{% endif %}
+            <div class="small muted">{{ p.email }}{% if p.designation %} · {{ p.designation }}{% endif %}</div></div></div></td>
           <td class="mono small">{{ p.username }}</td>
           <td><span class="badge {% if p.role == 'HOD' %}badge-accent{% elif p.role == 'ADMIN' %}badge-warn{% endif %}">{{ p.get_role_display }}</span>
             {% if not p.is_active %}<span class="badge badge-error">Deactivated</span>{% elif p.must_change_password %}<span class="badge" title="Hasn't set their own password yet">Awaiting first sign-in</span>{% endif %}</td>
           <td class="right">{{ p.invoice_count }}</td>
           <td class="small nowrap">{{ p.last_login|date:"d M Y"|default:"Never" }}</td>
-          <td class="right"><div class="row-actions">
+          <td class="right">
             {% if manageable %}
-              <a class="btn btn-sm btn-ghost" href="{% url 'administration:person_edit' p.pk %}">{% include "partials/icon.html" with name="edit" %} Edit</a>
-              {% if p.pk != user.pk %}
-                {% if p.is_active %}<a class="btn btn-sm btn-ghost" href="{% url 'administration:person_reset' p.pk %}">Reset password</a>{% endif %}
-                <form method="post" action="{% url 'administration:person_toggle' p.pk %}" class="inline">{% csrf_token %}
-                  <button class="btn btn-sm btn-ghost {% if p.is_active %}btn-danger{% endif %}" type="submit">{% if p.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form>
-              {% endif %}
+              {% include "partials/menu_open.html" %}
+                <a class="menu-item" href="{% url 'administration:person_edit' p.pk %}">{% include "partials/icon.html" with name="edit" %} Edit details</a>
+                {% if p.pk != user.pk %}
+                  {% if p.is_active %}<a class="menu-item" href="{% url 'administration:person_reset' p.pk %}">{% include "partials/icon.html" with name="key" %} Reset password</a>{% endif %}
+                  <div class="menu-sep"></div>
+                  <form method="post" action="{% url 'administration:person_toggle' p.pk %}">{% csrf_token %}
+                    <button class="menu-item {% if p.is_active %}danger{% endif %}" type="submit">{% include "partials/icon.html" with name="power" %} {% if p.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form>
+                {% endif %}
+              {% include "partials/menu_close.html" %}
             {% else %}<span class="small muted">Admin only</span>{% endif %}
-          </div></td>
+          </td>
         </tr>
       {% endfor %}
       </tbody>

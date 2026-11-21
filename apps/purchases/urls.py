@@ -10,6 +10,7 @@ urlpatterns = [
     path("export.xlsx", views.purchase_export, name="export"),
     path("<int:pk>/", views.purchase_detail, name="detail"),
     path("<int:pk>/edit/", views.purchase_edit, name="edit"),
+    path("<int:pk>/peek/", views.purchase_peek, name="peek"),
     path("<int:pk>/add-items/", views.purchase_add_items, name="add_items"),
     path("<int:pk>/delete/", views.purchase_delete, name="delete"),
     path("<int:pk>/bill/", views.bill_file, name="bill"),

@@ -36,6 +36,13 @@
   {% endif %}
   <div class="actions">
     <button class="btn" type="submit">{% include "partials/icon.html" with name="search" %} Apply</button>
-    {% if f.is_filtered %}<a class="btn btn-ghost" href="?period=all">Clear</a>{% endif %}
   </div>
 </form>
+{% if f.chips %}
+<div class="chips">
+  {% for label, value, qs in f.chips %}
+    <a class="chip" href="?{{ qs }}" title="Remove this filter"><span class="muted">{{ label }}:</span> {{ value }} <span class="chip-x" aria-hidden="true">×</span></a>
+  {% endfor %}
+  {% if f.chips|length > 1 %}<a class="chip chip-clear" href="?period=all">Clear all</a>{% endif %}
+</div>
+{% endif %}

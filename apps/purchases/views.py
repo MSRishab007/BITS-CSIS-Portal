@@ -197,6 +197,18 @@ def purchase_detail(request, pk):
 
 
 @login_required
+@require_GET
+def purchase_peek(request, pk):
+    """Invoice summary for the slide-over panel on the list page (HTML fragment)."""
+    purchase = get_object_or_404(
+        Purchase.objects.visible_to(request.user).select_related("vendor", "owner", "created_by"), pk=pk)
+    items = purchase.items.select_related("category", "item_type", "funding_source", "venue")
+    return render(request, "purchases/_peek.html", {
+        "purchase": purchase, "items": items, "can_edit": can_edit_purchase(request.user, purchase),
+    })
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def purchase_delete(request, pk):
     purchase = _get_editable(request, pk)

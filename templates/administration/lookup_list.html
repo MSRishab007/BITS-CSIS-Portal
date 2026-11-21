@@ -30,7 +30,7 @@
         {% if kind == "vendors" %}<th>GSTIN</th><th>Added</th>{% endif %}
         {% if kind == "fields" %}<th>Applies to</th><th>Type</th><th>Shown for</th>{% endif %}
         {% if cfg.usage %}<th class="right">Used by</th>{% endif %}
-        <th>Status</th><th class="right">Actions</th>
+        <th>Status</th><th class="right"><span class="sr-only">Actions</span></th>
       </tr></thead>
       <tbody class="stagger">
       {% for o in objects %}
@@ -47,10 +47,12 @@
             <td class="small">{% for c in o.categories.all %}{{ c.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">All</span>{% endfor %}</td>{% endif %}
           {% if cfg.usage %}<td class="right">{{ o.usage }} {% if cfg.usage == "items" %}item{{ o.usage|pluralize }}{% else %}invoice{{ o.usage|pluralize }}{% endif %}</td>{% endif %}
           <td>{% if o.is_active %}<span class="badge badge-ok">Shown</span>{% else %}<span class="badge">Hidden</span>{% endif %}</td>
-          <td class="right nowrap">
-            <a class="btn btn-sm btn-ghost" href="{% url 'administration:lookup_edit' kind o.pk %}">{% include "partials/icon.html" with name="edit" %} {% if kind == "categories" %}Edit / types{% else %}Edit{% endif %}</a>
-            <form method="post" action="{% url 'administration:lookup_toggle' kind o.pk %}" class="inline">{% csrf_token %}
-              <button class="btn btn-sm btn-ghost" type="submit">{% if o.is_active %}Hide{% else %}Show{% endif %}</button></form>
+          <td class="right">
+            {% include "partials/menu_open.html" %}
+              <a class="menu-item" href="{% url 'administration:lookup_edit' kind o.pk %}">{% include "partials/icon.html" with name="edit" %} {% if kind == "categories" %}Edit &amp; manage types{% else %}Edit{% endif %}</a>
+              <form method="post" action="{% url 'administration:lookup_toggle' kind o.pk %}">{% csrf_token %}
+                <button class="menu-item" type="submit">{% if o.is_active %}{% include "partials/icon.html" with name="eye-off" %} Hide from dropdowns{% else %}{% include "partials/icon.html" with name="eye" %} Show in dropdowns{% endif %}</button></form>
+            {% include "partials/menu_close.html" %}
           </td>
         </tr>
       {% endfor %}

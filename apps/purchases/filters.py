@@ -159,6 +159,24 @@ class PurchaseFilter:
             out.append(("Search", self.q))
         return out
 
+    def chips(self):
+        """Active filters as removable chips: [(label, value, querystring without it)]."""
+        out = []
+        described = dict(self.describe())
+        if self.period != "all" and "Period" in described:
+            out.append(("Period", described["Period"], self._qs_without("period")))
+        for key, label in (("category", "Category"), ("funding", "Funding"), ("owner", "Faculty"), ("q", "Search")):
+            if getattr(self, key):
+                out.append((label, described.get(label, ""), self._qs_without(key)))
+        return out
+
+    def _qs_without(self, key) -> str:
+        from urllib.parse import parse_qsl, urlencode
+        params = [(k, v) for k, v in parse_qsl(self.querystring()) if k != key]
+        if key == "period":
+            params = [(k, v) for k, v in params if k not in ("from", "to")] + [("period", "all")]
+        return urlencode(params)
+
     def querystring(self, period=None) -> str:
         """Query string for these filters (optionally with a different period)."""
         from urllib.parse import urlencode

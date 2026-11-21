@@ -5,7 +5,7 @@
 <div class="page-head">
   <div>
     <div class="eyebrow">Invoice</div>
-    <h1>{{ purchase.invoice_number }}</h1>
+    <h1 class="mono">{{ purchase.invoice_number }}</h1>
     <p>{{ purchase.vendor }} · {{ purchase.purchase_date|date:"d M Y" }}{% if user.can_view_all_records %} · {{ purchase.owner.full_name }}{% endif %}</p>
   </div>
   <div class="actions">
@@ -13,15 +13,20 @@
     {% if can_edit %}
       <a class="btn" href="{% url 'purchases:add_items' purchase.pk %}">{% include "partials/icon.html" with name="plus" %} Add items</a>
       <a class="btn btn-primary" href="{% url 'purchases:edit' purchase.pk %}">{% include "partials/icon.html" with name="edit" %} Edit</a>
+      {% include "partials/menu_open.html" %}
+        <a class="menu-item" href="{% url 'purchases:export' %}?period=all&amp;q={{ purchase.invoice_number|urlencode }}">{% include "partials/icon.html" with name="download" %} Export to Excel</a>
+        <div class="menu-sep"></div>
+        <a class="menu-item danger" href="{% url 'purchases:delete' purchase.pk %}">{% include "partials/icon.html" with name="trash" %} Delete invoice</a>
+      {% include "partials/menu_close.html" %}
     {% endif %}
   </div>
 </div>
 
 <div class="stats stagger">
-  <div class="card stat accent" style="--i:0"><div class="stat-label">Bill amount</div><div class="stat-value">₹{{ purchase.bill_amount|inr }}</div>
+  <div class="card stat accent tilt" style="--i:0"><span class="glare"></span><div class="stat-label depth-1">Bill amount</div><div class="stat-value depth-2">₹{{ purchase.bill_amount|inr }}</div>
     <div class="stat-note">Items total ₹{{ purchase.items_total|inr }}</div></div>
-  <div class="card stat" style="--i:1"><div class="stat-label">Items</div><div class="stat-value">{{ items|length }}</div></div>
-  <div class="card stat" style="--i:2"><div class="stat-label">Delivered</div><div class="stat-value" style="font-size:1.2rem;margin-top:10px">{{ purchase.delivery_date|date:"d M Y"|default:"—" }}</div></div>
+  <div class="card stat tilt" style="--i:1"><span class="glare"></span><div class="stat-label depth-1">Items</div><div class="stat-value depth-2" data-count="{{ items|length }}">{{ items|length }}</div></div>
+  <div class="card stat tilt" style="--i:2"><span class="glare"></span><div class="stat-label depth-1">Delivered</div><div class="stat-value depth-2" style="font-size:1.25rem;margin-top:12px">{{ purchase.delivery_date|date:"d M Y"|default:"—" }}</div></div>
 </div>
 
 <section class="card">
@@ -79,7 +84,4 @@
   {% else %}<p class="muted">No changes recorded.</p>{% endif %}
 </section>
 
-{% if can_edit %}
-<p style="margin-top:22px"><a class="btn btn-ghost btn-danger btn-sm" href="{% url 'purchases:delete' purchase.pk %}">{% include "partials/icon.html" with name="trash" %} Delete this invoice</a></p>
-{% endif %}
 {% endblock %}

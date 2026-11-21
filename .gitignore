@@ -9,12 +9,15 @@ env/
 # Environment / secrets
 .env
 
-# Local data: database and uploaded bills (backed up separately, never committed)
+# Local data: database, uploaded bills and backups (never committed)
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
+*.sqlite3.before-restore-*
 media/*
 !media/.gitkeep
+backups/
+*.tar.gz
 
 # Collected static files
 staticfiles/

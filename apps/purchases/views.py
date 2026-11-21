@@ -305,6 +305,12 @@ def api_my_invoices(request):
 # Bulk upload
 # --------------------------------------------------------------------------
 BULK_SESSION_KEY = "bulk_upload"
+BULK_STEPS = [
+    (1, "Download template", "Excel or CSV"),
+    (2, "Upload file", "Fill it in, then upload"),
+    (3, "Review", "Preview & check"),
+    (4, "Import", "All or nothing"),
+]
 BULK_MAX_SIZE = 5 * 1024 * 1024
 
 
@@ -351,7 +357,7 @@ def bulk_template(request, fmt):
 @login_required
 @require_http_methods(["GET", "POST"])
 def bulk_upload(request):
-    context = {"max_rows": bulk.MAX_ROWS}
+    context = {"max_rows": bulk.MAX_ROWS, "steps": BULK_STEPS}
     if request.method == "POST":
         upload = request.FILES.get("file")
         error = None
@@ -404,7 +410,7 @@ def bulk_confirm(request):
     os.remove(path)
     if not result.committed:
         return render(request, "purchases/bulk_upload.html",
-                      {"result": result, "filename": name, "max_rows": bulk.MAX_ROWS})
+                      {"result": result, "filename": name, "max_rows": bulk.MAX_ROWS, "steps": BULK_STEPS})
     n, m = len(result.invoices), result.item_count
     extra = f" {len(result.new_vendors)} new vendor(s) added." if result.new_vendors else ""
     messages.success(request, f"Imported {n} invoice{'s' * (n != 1)} with {m} item{'s' * (m != 1)}.{extra}")

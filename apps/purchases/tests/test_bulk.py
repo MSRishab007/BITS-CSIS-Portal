@@ -203,6 +203,18 @@ class ImportTests(BulkTestBase):
         r = self.upload(self.f1, rows)
         self.assertEqual([e for e in self.errors(r)], [(3, "", "Rack Position is required.")])
 
+    def test_stepper_states(self):
+        self.client.force_login(self.f1)
+        r = self.client.get(reverse("purchases:bulk_upload"))
+        self.assertContains(r, 'class="stepper"')
+        self.assertContains(r, "step: 1, error: false")
+        r = self.upload(self.f1, [self.row(category="Furniture")])
+        self.assertContains(r, "step: 3, error: true")
+        self.assertContains(r, "1 problem")
+        r = self.upload(self.f1, [self.row()])
+        self.assertContains(r, "step: 3, error: false")
+        self.assertContains(r, "1 invoice ready")
+
     def test_rejects_other_file_types(self):
         self.client.force_login(self.f1)
         f = SimpleUploadedFile("x.pdf", b"%PDF-1.4", content_type="application/pdf")

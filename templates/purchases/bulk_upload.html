@@ -2,6 +2,8 @@
 {% load portal_tags %}
 {% block title %}Bulk upload{% endblock %}
 {% block content %}
+<div x-data="{ step: {% if result %}3{% else %}1{% endif %}, error: {% if result and not result.ok %}true{% else %}false{% endif %}, fileName: '' }"
+     @file-chosen="step = 2; error = false; fileName = $event.detail" @checking="step = 3" @importing="step = 4">
 <div class="page-head">
   <div>
     <div class="eyebrow">Bulk upload</div>
@@ -10,14 +12,30 @@
   </div>
 </div>
 
+<ol class="stepper" :style="`--p: ${(step - 1) / 3}`" aria-label="Progress">
+  <span class="fill" aria-hidden="true"></span>
+  {% for n, label, sub in steps %}
+  <li class="step" :class="{ done: step > {{ n }}, current: step === {{ n }} && !({{ n }} === 3 && error), error: {{ n }} === 3 && error }"
+      :aria-current="step === {{ n }} ? 'step' : null">
+    <span class="step-dot">
+      <template x-if="step > {{ n }}">{% include "partials/icon.html" with name="check" %}</template>
+      <template x-if="step === 3 && error && {{ n }} === 3">{% include "partials/icon.html" with name="x" %}</template>
+      <span x-show="!(step > {{ n }}) && !(step === 3 && error && {{ n }} === 3)">{{ n }}</span>
+    </span>
+    <span class="step-label">{{ label }}</span>
+    <span class="step-sub">{% if n == 2 %}<span x-text="fileName || '{{ filename|default:sub|escapejs }}'">{{ filename|default:sub }}</span>{% elif n == 3 and result %}<span x-show="step === 3">{% if result.ok %}{{ result.invoices|length }} invoice{{ result.invoices|length|pluralize }} ready{% else %}{{ result.errors|length }} problem{{ result.errors|length|pluralize }}{% endif %}</span><span x-show="step !== 3">{{ sub }}</span>{% else %}{{ sub }}{% endif %}</span>
+  </li>
+  {% endfor %}
+</ol>
+
 {% if not result or not result.ok %}
 <div class="grid grid-2 stagger" style="align-items:start">
-  <section class="card" style="--i:0">
+  <section class="card" style="--i:0" :class="{ 'is-active': step === 1, 'is-done': step > 1 && !error }">
     <div class="card-head"><div><span class="badge badge-accent">Step 1</span><h2 style="margin-top:8px">Download the template</h2>
       <p>Includes dropdowns for categories, types, funding sources, venues and vendors, plus an example sheet.</p></div></div>
     <div class="actions">
-      <a class="btn btn-primary" href="{% url 'purchases:bulk_template' 'xlsx' %}">{% include "partials/icon.html" with name="file" %} Excel template (.xlsx)</a>
-      <a class="btn" href="{% url 'purchases:bulk_template' 'csv' %}">CSV template</a>
+      <a class="btn btn-primary" href="{% url 'purchases:bulk_template' 'xlsx' %}" @click="step = Math.max(step, 2)">{% include "partials/icon.html" with name="file" %} Excel template (.xlsx)</a>
+      <a class="btn" href="{% url 'purchases:bulk_template' 'csv' %}" @click="step = Math.max(step, 2)">CSV template</a>
     </div>
     <ul class="small muted" style="margin:16px 0 0;padding-left:18px">
       <li>One row per item. Repeat the invoice details on each row of the same invoice.</li>
@@ -27,14 +45,14 @@
     </ul>
   </section>
 
-  <section class="card" style="--i:1">
+  <section class="card" style="--i:1" :class="{ 'is-active': step === 2 || error }">
     <div class="card-head"><div><span class="badge badge-accent">Step 2</span><h2 style="margin-top:8px">Upload the filled file</h2>
       <p>You'll see a preview and any problems before anything is saved.</p></div></div>
-    <form method="post" enctype="multipart/form-data" x-data="{ name: '', over: false, busy: false }" @submit="busy = true">
+    <form method="post" enctype="multipart/form-data" x-data="{ name: '', over: false, busy: false }" @submit="busy = true; $dispatch('checking')">
       {% csrf_token %}
       <label class="dropzone" :class="over && 'over'" @dragover.prevent="over = true" @dragleave="over = false"
-             @drop.prevent="over = false; $refs.file.files = $event.dataTransfer.files; name = $refs.file.files[0]?.name || ''">
-        <input type="file" name="file" accept=".xlsx,.csv" x-ref="file" hidden @change="name = $event.target.files[0]?.name || ''">
+             @drop.prevent="over = false; $refs.file.files = $event.dataTransfer.files; name = $refs.file.files[0]?.name || ''; name && $dispatch('file-chosen', name)">
+        <input type="file" name="file" accept=".xlsx,.csv" x-ref="file" hidden @change="name = $event.target.files[0]?.name || ''; name && $dispatch('file-chosen', name)">
         <span class="empty-icon">{% include "partials/icon.html" with name="file" %}</span>
         <strong x-text="name || 'Drop your file here or click to choose'">Drop your file here or click to choose</strong>
         <span class="small muted">.xlsx or .csv, up to 5 MB</span>
@@ -78,7 +96,7 @@
 
 <section class="card">
   <div class="card-head"><div><h2>Preview of {{ filename }}</h2><p>All rows passed the checks. This is exactly what will be saved.</p></div>
-    <span class="badge badge-ok">{% include "partials/icon.html" with name="check" %} No problems</span></div>
+    <span class="badge badge-ok">No problems</span></div>
   <div class="table-wrap">
     <table class="table">
       <thead><tr><th>Row</th><th>Invoice</th><th>Vendor</th>{% if user.can_view_all_records %}<th>Faculty</th>{% endif %}<th>Date</th><th>Items</th><th class="right">Bill</th></tr></thead>
@@ -101,7 +119,7 @@
 
 <div class="save-bar">
   <div class="totals"><span><strong>{{ result.invoices|length }}</strong> invoices</span><span><strong>{{ result.item_count }}</strong> items</span></div>
-  <form method="post" action="{% url 'purchases:bulk_confirm' %}" class="actions" x-data="{ busy: false }" @submit="busy = true">
+  <form method="post" action="{% url 'purchases:bulk_confirm' %}" class="actions" x-data="{ busy: false }" @submit="busy = true; $dispatch('importing')">
     {% csrf_token %}
     <a class="btn btn-ghost" href="{% url 'purchases:bulk_upload' %}">Cancel</a>
     <button type="submit" class="btn btn-primary" :disabled="busy">{% include "partials/icon.html" with name="check" %}
@@ -109,4 +127,5 @@
   </form>
 </div>
 {% endif %}
+</div>
 {% endblock %}

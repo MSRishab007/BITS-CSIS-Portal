@@ -309,7 +309,7 @@ BULK_STEPS = [
     (1, "Download template", "Excel or CSV"),
     (2, "Upload file", "Fill it in, then upload"),
     (3, "Review", "Preview & check"),
-    (4, "Import", "All or nothing"),
+    (4, "Import", "Atomic transaction"),
 ]
 BULK_MAX_SIZE = 5 * 1024 * 1024
 

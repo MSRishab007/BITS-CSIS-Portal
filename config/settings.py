@@ -145,6 +145,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 LOGIN_URL = "accounts:login"
+CSRF_FAILURE_VIEW = "apps.core.views.csrf_failure"
 LOGIN_REDIRECT_URL = "core:home"
 LOGOUT_REDIRECT_URL = "accounts:login"
 

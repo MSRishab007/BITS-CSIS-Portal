@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Page expired{% endblock %}
+{% block content %}
+<section class="card" style="max-width:560px">
+  <div class="empty-icon" style="margin:0 0 14px">{% include "partials/icon.html" with name="clock" %}</div>
+  <h1>This page expired</h1>
+  <p class="muted">The form was opened before you signed in or out (perhaps in another tab), so it couldn't be submitted safely.
+    Nothing was saved. Go back, reload the page and try again.</p>
+  <div class="actions" style="margin-top:16px">
+    <button type="button" class="btn btn-primary" onclick="history.back()">Go back</button>
+    <a class="btn" href="{% url 'core:home' %}">Dashboard</a>
+  </div>
+</section>
+{% endblock %}
+{% block auth_content %}
+<div class="card auth-card">
+  <h1>This page expired</h1>
+  <p class="muted">Please reload and try again. Nothing was saved.</p>
+  <a class="btn btn-primary btn-block" href="{% url 'accounts:login' %}">Go to sign in</a>
+</div>
+{% endblock %}

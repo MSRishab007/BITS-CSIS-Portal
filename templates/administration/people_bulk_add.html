@@ -15,7 +15,7 @@
       <div class="help">{{ form.lines.help_text }}</div>
     </div>
   </section>
-  <div class="save-bar"><span class="muted small">All or nothing: if any line has a problem, no one is added.</span>
+  <div class="save-bar"><span class="muted small">Atomic: if any line has a problem, no one is added.</span>
     <button type="submit" class="btn btn-primary">{% include "partials/icon.html" with name="check" %} Add people</button></div>
 </form>
 {% endblock %}

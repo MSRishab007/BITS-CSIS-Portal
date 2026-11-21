@@ -63,3 +63,47 @@ class SearchAndShellTests(TestCase):
         self.assertContains(r, "Continue with Google")
         self.assertContains(r, "Google sign-in is coming soon")
         self.assertNotContains(r, "accounts.google.com")  # no real Google flow yet
+
+
+@override_settings(ALLOWED_EMAIL_DOMAINS=[DOMAIN])
+class ExpiredTokenTests(TestCase):
+    """A sign-in form loaded before a sign-in/out elsewhere has a stale token."""
+
+    def setUp(self):
+        from django.test import Client
+        self.user = User.objects.create_user(f"tara@{DOMAIN}", "Pass-word-123", full_name="Tara Iyer")
+        self.client = Client(enforce_csrf_checks=True)
+
+    def stale_login(self):
+        self.client.get(reverse("accounts:login"))  # sets the CSRF cookie
+        return self.client.post(reverse("accounts:login"),
+                                {"username": "tara", "password": "Pass-word-123", "csrfmiddlewaretoken": "x" * 64})
+
+    def test_stale_login_form_redirects_back_with_explanation(self):
+        r = self.stale_login()
+        self.assertRedirects(r, reverse("accounts:login"), fetch_redirect_response=False)
+        page = self.client.get(reverse("accounts:login"))
+        self.assertContains(page, "That sign-in page had expired")
+        self.assertNotContains(page, "CSRF verification failed")
+
+    def test_stale_login_when_already_signed_in_says_who(self):
+        self.client.force_login(self.user)
+        r = self.stale_login()
+        self.assertRedirects(r, reverse("core:home"), fetch_redirect_response=False)
+        self.assertContains(self.client.get(reverse("core:home")), "already signed in as Tara Iyer")
+
+    def test_other_forms_get_friendly_page(self):
+        self.client.force_login(self.user)
+        self.client.get(reverse("core:home"))
+        r = self.client.post(reverse("accounts:logout"), {"csrfmiddlewaretoken": "x" * 64})
+        self.assertContains(r, "This page expired", status_code=403)
+
+    def test_valid_login_still_works(self):
+        page = self.client.get(reverse("accounts:login"))
+        token = page.cookies["csrftoken"].value
+        r = self.client.post(reverse("accounts:login"),
+                             {"username": "tara", "password": "Pass-word-123", "csrfmiddlewaretoken": token})
+        self.assertRedirects(r, reverse("core:home"))
+
+    def test_sign_in_button_disables_on_submit(self):
+        self.assertContains(self.client.get(reverse("accounts:login")), "Signing in…")

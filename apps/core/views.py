@@ -9,6 +9,29 @@ from django.views.decorators.http import require_GET
 from apps.purchases.models import Purchase, PurchaseItem
 
 
+def csrf_failure(request, reason=""):
+    """Friendly handling of an expired form token (instead of Django's 403 page).
+
+    Happens when a page was loaded before someone signed in/out in another tab
+    (the token changes at every sign-in/out), after pressing Back, or on a
+    double-submitted form.
+    """
+    from django.contrib import messages
+    from django.shortcuts import redirect
+    from django.urls import reverse
+
+    login_url = reverse("accounts:login")
+    if request.path == login_url:
+        if request.user.is_authenticated:
+            messages.info(request, f"You're already signed in as {request.user.full_name} in this browser. "
+                                   "To use another account, sign out first or open a private window.")
+            return redirect("core:home")
+        messages.info(request, "That sign-in page had expired (you may have signed in or out in another tab). "
+                               "Please sign in again.")
+        return redirect(login_url)
+    return render(request, "403_csrf.html", status=403)
+
+
 @require_GET
 def healthz(request):
     """Lightweight check for monitoring: confirms the app and database respond."""

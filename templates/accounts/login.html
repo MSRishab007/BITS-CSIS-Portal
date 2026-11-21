@@ -7,13 +7,14 @@
   <div class="auth-org">BITS Pilani · {{ DEPARTMENT_NAME }}</div>
   <h1>{{ PORTAL_NAME }}</h1>
   <p class="muted">Sign in with your BITS email or username.</p>
-  <form method="post" novalidate>
+  {% for message in messages %}<div class="alert alert-info" style="margin-top:16px">{{ message }}</div>{% endfor %}
+  <form method="post" novalidate x-data="{ busy: false }" @submit="if (busy) { $event.preventDefault() } busy = true">
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="form-errors" style="margin-top:16px">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     {% include "partials/field.html" with field=form.username %}
     {% include "partials/field.html" with field=form.password %}
     <input type="hidden" name="next" value="{{ next }}">
-    <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+    <button type="submit" class="btn btn-primary btn-block" :disabled="busy"><span x-text="busy ? 'Signing in…' : 'Sign in'">Sign in</span></button>
   </form>
 
   {# Google sign-in placeholder: becomes the real flow when Google login is added. #}

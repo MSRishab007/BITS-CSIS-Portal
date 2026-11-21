@@ -133,7 +133,7 @@
 <main class="auth">{% block auth_content %}{% endblock %}</main>
 {% endif %}
 
-{% if messages %}
+{% if messages and user.is_authenticated and not user.must_change_password %}{# sign-in pages show messages inline #}
 <div class="toasts">
   {% for message in messages %}
   <div class="toast {{ message.tags }}" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)"

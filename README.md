@@ -117,7 +117,7 @@ one opens "add items" for it. Typing a new number starts a new invoice.
 from the current lookup lists and custom fields, with dropdowns), fill one row
 per item, upload. The file is checked with a dry run (the real import inside a
 transaction that is then rolled back) and errors are listed by row and column.
-Only an error-free file can be imported, and the import is all-or-nothing.
+Only an error-free file can be imported, and the import is a single atomic transaction: every row is saved, or none is.
 Admin/HoD templates have a "Faculty email or username" column for uploading
 on behalf of faculty. Code: `apps/purchases/bulk.py`.
 

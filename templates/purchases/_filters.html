@@ -1,0 +1,33 @@
+{# Shared filter bar (purchase list + analytics). Expects PurchaseFilter `f` and its form_context. #}
+<form method="get" class="filters filters-bar" x-data="{ period: '{{ f.period }}' }">
+  {% if show_search %}
+  <div class="field"><label for="q">Search</label>
+    <input type="search" id="q" name="q" value="{{ f.q }}" placeholder="Invoice, vendor, item, serial no.…"></div>
+  {% endif %}
+  <div class="field"><label for="f-period">Period</label>
+    <select id="f-period" name="period" x-model="period" @change="period !== 'custom' && $el.form.submit()">
+      {% for v, l in periods %}<option value="{{ v }}" {% if f.period == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div class="field" x-show="period === 'custom'" x-cloak><label for="f-from">From</label>
+    <input type="date" id="f-from" name="from" value="{{ f.date_from|date:'Y-m-d' }}" :disabled="period !== 'custom'"></div>
+  <div class="field" x-show="period === 'custom'" x-cloak><label for="f-to">To</label>
+    <input type="date" id="f-to" name="to" value="{{ f.date_to|date:'Y-m-d' }}" :disabled="period !== 'custom'"></div>
+  <div class="field"><label for="f-cat">Category</label>
+    <select id="f-cat" name="category" onchange="this.form.submit()"><option value="">All categories</option>
+      {% for c in categories %}<option value="{{ c.id }}" {% if f.category == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label for="f-fund">Funding</label>
+    <select id="f-fund" name="funding" onchange="this.form.submit()"><option value="">All funding</option>
+      {% for s in funding_sources %}<option value="{{ s.id }}" {% if f.funding == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+    </select></div>
+  {% if owners is not None %}
+  <div class="field"><label for="f-owner">Faculty</label>
+    <select id="f-owner" name="owner" onchange="this.form.submit()"><option value="">Everyone</option>
+      {% for o in owners %}<option value="{{ o.id }}" {% if f.owner == o.id %}selected{% endif %}>{{ o.full_name }}</option>{% endfor %}
+    </select></div>
+  {% endif %}
+  <div class="actions">
+    <button class="btn" type="submit">{% include "partials/icon.html" with name="search" %} Apply</button>
+    {% if f.is_filtered %}<a class="btn btn-ghost" href="?period=all">Clear</a>{% endif %}
+  </div>
+</form>

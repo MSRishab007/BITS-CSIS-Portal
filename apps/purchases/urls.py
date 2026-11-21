@@ -7,6 +7,7 @@ app_name = "purchases"
 urlpatterns = [
     path("", views.purchase_list, name="list"),
     path("new/", views.purchase_create, name="create"),
+    path("export.xlsx", views.purchase_export, name="export"),
     path("<int:pk>/", views.purchase_detail, name="detail"),
     path("<int:pk>/edit/", views.purchase_edit, name="edit"),
     path("<int:pk>/add-items/", views.purchase_add_items, name="add_items"),

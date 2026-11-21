@@ -42,3 +42,32 @@ def history_changes(record):
         return []
     skip = {"updated_at", "deactivated_at", "name_key"}
     return [c.field.replace("_", " ") for c in record.diff_against(prev).changes if c.field not in skip]
+
+
+@register.filter
+def inr_compact(value):
+    """Short Indian-style amount for axes and tiles: 950 -> ₹950, 125000 -> ₹1.25L, 23400000 -> ₹2.34Cr."""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return value
+    sign = "-" if v < 0 else ""
+    v = abs(v)
+    if v >= 1e7:
+        s, unit = v / 1e7, "Cr"
+    elif v >= 1e5:
+        s, unit = v / 1e5, "L"
+    elif v >= 1e3:
+        s, unit = v / 1e3, "K"
+    else:
+        return f"{sign}₹{v:,.0f}"
+    text = f"{s:.2f}".rstrip("0").rstrip(".")
+    return f"{sign}₹{text}{unit}"
+
+
+@register.filter
+def percent_of(value, total):
+    try:
+        return 0 if not total else round(float(value) * 100 / float(total), 1)
+    except (TypeError, ValueError):
+        return 0

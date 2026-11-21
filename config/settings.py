@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "apps.catalog",
     "apps.purchases",
     "apps.administration",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [

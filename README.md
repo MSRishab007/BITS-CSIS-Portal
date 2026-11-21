@@ -100,6 +100,8 @@ media/             uploaded bills (private, git-ignored)
 | `/purchases/<id>/` | Invoice details, items, change history |
 | `/purchases/<id>/add-items/` | Add items to an invoice already recorded |
 | `/purchases/<id>/edit/`, `/delete/` | Owner, Admin or HoD only |
+| `/analytics/` | Spend by month, category, funding, vendor, faculty; warranties ending |
+| `/purchases/export.xlsx` | Excel of the filtered items (button on list and analytics) |
 | `/purchases/bulk/` | Bulk upload: template download, preview, import |
 | `/manage/people/` | Admin/HoD: add (one or many), edit, deactivate, reset passwords |
 | `/manage/lists/<kind>/` | Admin/HoD: categories & types, funding sources, venues, vendors, custom fields |
@@ -143,6 +145,16 @@ Purchase (one invoice)          PurchaseItem (one line on the invoice)
 - **Custom fields:** Admin → Custom fields. Values are stored in the `extra`
   JSON column, so adding a field needs no database change.
 - **Lookup lists** are deactivated, not deleted, so old records keep their values.
+
+## Analytics & export
+
+- Faculty see only their own figures; Admin/HoD see the department and can filter by faculty.
+- Periods follow the Indian financial year (1 April – 31 March); default is the current FY.
+- "Spend" = bill amounts. With a category or funding filter, item amounts are used
+  instead (a bill may include other items). Category/funding charts always use item amounts.
+- Charts are plain HTML/CSS (no chart library): hover or focus a bar for the exact
+  amount, "Show table" for the numbers. Filters are shared with the purchase list
+  (`apps/purchases/filters.py`), so the Excel export matches what's on screen.
 
 ## Management rules
 

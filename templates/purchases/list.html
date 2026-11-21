@@ -6,34 +6,15 @@
   <div>
     <div class="eyebrow">{% if user.can_view_all_records %}Department{% else %}Your records{% endif %}</div>
     <h1>{% if user.can_view_all_records %}All purchases{% else %}My purchases{% endif %}</h1>
-    <p>{{ page.paginator.count }} invoice{{ page.paginator.count|pluralize }}{% if q or selected or date_from or date_to %} match your filters{% endif %}.</p>
+    <p>{{ page.paginator.count }} invoice{{ page.paginator.count|pluralize }}{% if f.is_filtered %} match your filters{% endif %}.</p>
   </div>
-  <div class="actions"><a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a></div>
+  <div class="actions">
+    <a class="btn" href="{% url 'purchases:export' %}?{{ querystring }}" title="Download what's shown as Excel">{% include "partials/icon.html" with name="download" %} Export to Excel</a>
+    <a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a></div>
 </div>
 
 <section class="card">
-  <form method="get" class="filters">
-    <div class="field"><label for="q">Search</label>
-      <input type="search" id="q" name="q" value="{{ q }}" placeholder="Invoice, vendor, item, serial no.…"></div>
-    <div class="field"><label for="f-cat">Category</label>
-      <select id="f-cat" name="category" onchange="this.form.submit()"><option value="">All</option>
-        {% for c in categories %}<option value="{{ c.id }}" {% if selected.category == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
-      </select></div>
-    <div class="field"><label for="f-fund">Funding</label>
-      <select id="f-fund" name="funding" onchange="this.form.submit()"><option value="">All</option>
-        {% for f in funding_sources %}<option value="{{ f.id }}" {% if selected.funding == f.id %}selected{% endif %}>{{ f.name }}</option>{% endfor %}
-      </select></div>
-    {% if owners is not None %}
-    <div class="field"><label for="f-owner">Faculty</label>
-      <select id="f-owner" name="owner" onchange="this.form.submit()"><option value="">Everyone</option>
-        {% for o in owners %}<option value="{{ o.id }}" {% if selected.owner == o.id %}selected{% endif %}>{{ o.full_name }}</option>{% endfor %}
-      </select></div>
-    {% else %}<div></div>{% endif %}
-    <div class="field"><label for="f-from">From</label><input type="date" id="f-from" name="from" value="{{ date_from }}"></div>
-    <div class="field"><label for="f-to">To</label><input type="date" id="f-to" name="to" value="{{ date_to }}"></div>
-    <div class="actions"><button class="btn" type="submit">{% include "partials/icon.html" with name="search" %} Filter</button>
-      {% if q or selected or date_from or date_to %}<a class="btn btn-ghost" href="{% url 'purchases:list' %}">Clear</a>{% endif %}</div>
-  </form>
+  {% include "purchases/_filters.html" with show_search=True %}
 </section>
 
 <section class="card">
@@ -72,8 +53,8 @@
   {% else %}
   <div class="empty">
     <div class="empty-icon">{% include "partials/icon.html" with name="receipt" %}</div>
-    <h2>{% if q or selected or date_from or date_to %}No invoices match{% else %}No purchases yet{% endif %}</h2>
-    <p>{% if q or selected or date_from or date_to %}Try different filters.{% else %}Record your first invoice and its items. It takes about a minute.{% endif %}</p>
+    <h2>{% if f.is_filtered %}No invoices match{% else %}No purchases yet{% endif %}</h2>
+    <p>{% if f.is_filtered %}Try different filters.{% else %}Record your first invoice and its items. It takes about a minute.{% endif %}</p>
     <a class="btn btn-primary" href="{% url 'purchases:create' %}">{% include "partials/icon.html" with name="plus" %} New purchase</a>
   </div>
   {% endif %}

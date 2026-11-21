@@ -1,0 +1,29 @@
+{% load portal_tags %}
+{# Horizontal bar chart. Expects rows=[{label,value,n,pct,id}], title, note, unit, param (drill-down filter name). #}
+<section class="card viz-card" x-data="{ table: false }">
+  <div class="card-head">
+    <div><h2>{{ title }}</h2>{% if note %}<p>{{ note }}</p>{% endif %}</div>
+    {% if rows %}<button type="button" class="btn btn-ghost btn-sm" @click="table = !table" x-text="table ? 'Show chart' : 'Show table'">Show table</button>{% endif %}
+  </div>
+  {% if rows %}
+  <ul class="hbars" x-show="!table" role="list">
+    {% for r in rows %}
+    <li class="hbar{% if r.other %} is-other{% endif %}" style="--i: {{ forloop.counter0 }}">
+      {% if param and r.id %}<a class="hbar-label" href="?{{ querystring }}&amp;{{ param }}={{ r.id }}" title="Filter by {{ r.label }}">{{ r.label }}</a>
+      {% else %}<span class="hbar-label">{{ r.label }}</span>{% endif %}
+      <span class="hbar-track" tabindex="0" style="--w: {{ r.pct }}%">
+        <span class="hbar-fill"></span>
+        <span class="viz-tip"><strong>{{ r.label }}</strong><br>₹{{ r.value|inr }} · {{ r.n }} {{ unit }}{{ r.n|pluralize }}</span>
+      </span>
+      <span class="hbar-value">{{ r.value|inr_compact }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="table-wrap" x-show="table" x-cloak>
+    <table class="table"><thead><tr><th>{{ label_header|default:"Name" }}</th><th class="right">{{ unit|capfirst }}s</th><th class="right">Amount (₹)</th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td>{{ r.label }}</td><td class="right">{{ r.n }}</td><td class="right">{{ r.value|inr }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  {% else %}
+  <p class="muted viz-empty">No data for these filters.</p>
+  {% endif %}
+</section>

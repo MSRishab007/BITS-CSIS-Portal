@@ -20,7 +20,8 @@ from django.views.decorators.http import require_GET, require_http_methods
 from apps.catalog.models import Category, CustomField, FundingSource, Vendor, normalize_vendor_name
 from apps.core.templatetags.portal_tags import inr
 
-from . import bulk
+from . import bulk, exports
+from .filters import PurchaseFilter
 from .forms import ItemFormSet, PurchaseForm
 from .models import Purchase, PurchaseItem, can_edit_purchase
 
@@ -80,52 +81,27 @@ def _get_editable(request, pk):
 @login_required
 @require_GET
 def purchase_list(request):
-    user = request.user
-    qs = (Purchase.objects.visible_to(user)
+    f = PurchaseFilter.from_request(request)
+    qs = (f.purchases(request.user)
           .select_related("vendor", "owner")
-          .annotate(item_count=Count("items"))
+          .annotate(item_count=Count("items", distinct=True))
           .order_by("-purchase_date", "-id"))
-
-    q = request.GET.get("q", "").strip()
-    if q:
-        qs = qs.filter(Q(invoice_number__icontains=q) | Q(order_number__icontains=q)
-                       | Q(vendor__name__icontains=q) | Q(items__item_name__icontains=q)
-                       | Q(items__serial_numbers__icontains=q) | Q(owner__full_name__icontains=q)).distinct()
-    filters = {
-        "category": ("items__category_id", Category.objects.active()),
-        "funding": ("items__funding_source_id", FundingSource.objects.active()),
-    }
-    selected = {}
-    for param, (lookup, _) in filters.items():
-        value = request.GET.get(param, "")
-        if value.isdigit():
-            qs = qs.filter(**{lookup: int(value)}).distinct()
-            selected[param] = int(value)
-    owner = request.GET.get("owner", "")
-    if user.can_view_all_records and owner.isdigit():
-        qs = qs.filter(owner_id=int(owner))
-        selected["owner"] = int(owner)
-    date_from, date_to = request.GET.get("from", ""), request.GET.get("to", "")
-    if date_from:
-        qs = qs.filter(purchase_date__gte=date_from)
-    if date_to:
-        qs = qs.filter(purchase_date__lte=date_to)
-
     page = Paginator(qs, 25).get_page(request.GET.get("page"))
-    params = request.GET.copy()
-    params.pop("page", None)
     return render(request, "purchases/list.html", {
-        "page": page,
-        "q": q,
-        "selected": selected,
-        "date_from": date_from,
-        "date_to": date_to,
-        "categories": filters["category"][1],
-        "funding_sources": filters["funding"][1],
-        "owners": get_user_model().objects.filter(purchases__isnull=False).distinct()
-        if user.can_view_all_records else None,
-        "querystring": params.urlencode(),
+        "page": page, "querystring": f.querystring(), **f.form_context(request.user),
     })
+
+
+@login_required
+@require_GET
+def purchase_export(request):
+    """Excel file of the items on the invoices currently filtered."""
+    f = PurchaseFilter.from_request(request)
+    data = exports.build_items_xlsx(f, request.user)
+    stamp = timezone.localtime().strftime("%Y%m%d-%H%M")
+    response = HttpResponse(data, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = f'attachment; filename="purchases-{stamp}.xlsx"'
+    return response
 
 
 @login_required
